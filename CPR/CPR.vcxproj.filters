@@ -36,12 +36,27 @@
     <ClCompile Include="CPR.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Controler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PlateLocate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SVMJudge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LBP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="CPR.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Controler.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -56,7 +71,19 @@
     </QtRcc>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="PlateLocate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SVMJudge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LBP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

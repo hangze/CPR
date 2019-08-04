@@ -4,13 +4,13 @@
 #define SHOW_IMAGE(imgName, debug) \
   if (debug) { \
     cv::namedWindow("imgName", cv::WINDOW_AUTOSIZE); \
-    cv::moveWindow("imgName", 50, 50); \
     cv::imshow("imgName", imgName); \
 }
     //cv::waitKey(0); \//
    // cv::destroyWindow("imgName"); \//
   //}
 
+namespace util{
 //函数声明
 void on_mouse(int EVENT, int x, int y, int flags, void* userdata);
 
@@ -76,3 +76,42 @@ void on_mouse(int EVENT, int x, int y, int flags, void* userdata)
 	break;
 	}
 }
+
+/**
+ * @brief 裁剪旋转矩形区域
+ * detail description
+ * @param srcImg    原始图像//必须原始图像
+ * @param rRect     旋转矩形
+ * @param outImg    输出图像，大小与选项矩形同， 已正置
+ */
+void getRotatedRectArea(const cv::Mat &srcImg,const cv::RotatedRect &rRect,cv::Mat &outImg) {
+
+	cv::Point2f vertices[4];
+	cv::RotatedRect rRectCopy = rRect;
+	rRectCopy.points(vertices);
+	if (rRectCopy.size.width < rRectCopy.size.height) {
+		std::swap(rRectCopy.size.width, rRectCopy.size.height);
+		std::swap(vertices[0], vertices[3]);
+		std::swap(vertices[0], vertices[2]);
+		std::swap(vertices[0], vertices[1]);
+	}
+	//将矩形点转换到原图大小的矩形点
+	for (int i = 0; i < 4; i++) {
+		vertices[i].x = vertices[i].x*srcImg.cols / 800;
+		vertices[i].y = vertices[i].y*srcImg.cols / 800;
+	}
+	cv::Point2f dstPoint[3];
+	dstPoint[0] = cv::Point2f(0, rRectCopy.size.height*srcImg.cols / 800);
+	dstPoint[1] = cv::Point2f(0, 0);                                         
+	dstPoint[2] = cv::Point2f(rRectCopy.size.width*srcImg.cols / 800, 0);
+	cv::Mat transMat = cv::getAffineTransform(vertices, dstPoint);
+	//cv::GaussianBlur(src)//此处可考虑使用高斯模糊
+	cv::warpAffine(srcImg, outImg, transMat, cv::Size(rRectCopy.size.width*srcImg.cols / 800, rRectCopy.size.height*srcImg.cols / 800));
+
+}
+
+
+}//namespace util
+
+
+
