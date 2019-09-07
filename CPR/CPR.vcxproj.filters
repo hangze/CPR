@@ -51,6 +51,15 @@
     <ClCompile Include="LBP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CNNRecognizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GenernalRecognizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="thirdparty\xmlParser\xmlParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="CPR.h">
@@ -84,6 +93,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LBP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CNNRecognizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="accuracy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="backupSource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GenernalRecognizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -15,8 +15,12 @@
 #include<iostream>
 #include<string.h>
 #include<sstream>
+#include<windows.h>
+#include<corecrt_wstring.h>
 
 #include<opencv.hpp>
+
+#include"thirdparty/xmlParser/xmlParser.h"
 
 
 class stdafx

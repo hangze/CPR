@@ -28,6 +28,8 @@ private:
 	//std::vector<CPlate> Plates;
 
 public:
+	double totaltime = 0;
+	double alltime = 0;
 	Controler(QObject *parent = Q_NULLPTR);
 	~Controler();
 	static Controler* getControler(QObject *parent = Q_NULLPTR);
@@ -35,6 +37,7 @@ public:
 	static CGarbo Garbo;
 	void showImg(const cv::Mat &img);
 	QImage tempImg2;
+	PlateLocate *PR;
 	//cv::Mat tempImg;
 
 	inline bool setCurrImgCount(int Count) { currImgCount = Count; return true; }

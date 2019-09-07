@@ -1,3 +1,4 @@
+/*
 #include"SVMTest.h"
 
 SVMTest::SVMTest(const string &_trainDataFileList,
@@ -241,3 +242,4 @@ void SVMTest::Predict()
 
 }
 
+*/

@@ -1,4 +1,4 @@
-﻿#include"stdafx.h"
+#include"stdafx.h"
 #pragma once
 #include "Controler.h"
 #include"PlateLocate.h"
@@ -38,6 +38,7 @@ Controler::Controler(QObject *parent)
 {
 	currImgCount = 0;
 	imgTotalCount = 0;
+	PR = new PlateLocate();
 
 }
 
@@ -73,8 +74,8 @@ void Controler::slotProcessImg() {
 		currImgCount++;
 
 		std::string stdpath = path.toLocal8Bit();//转化为本地字符，与源文件编码方式相关
-		PlateLocate::startPR(stdpath, currPlates);
-
+		PR->startPR(stdpath);
+		
 	}
 	
 }
@@ -97,14 +98,35 @@ void Controler::slotBatchTest() {
 	#ifdef DEBUG
 		if (1)qDebug() << "slotBatchTest";
 	#endif // DEBUG
+
+		clock_t start, finish;
+		
+
 		while (imgTotalCount > 0 && currImgCount < imgTotalCount&&currImgCount >= 0)
 		{
-			QString path = *imgDirectory + imgNameList[currImgCount];
+			QString  path = *imgDirectory + imgNameList[currImgCount];
+			
+			//std::string directory = (*imgDirectory).toLocal8Bit();
+			//std::string imgName = imgNameList[currImgCount].toLocal8Bit();
 			currImgCount++;
 
 			std::string stdpath = path.toLocal8Bit();//转化为本地字符，与源文件编码方式相关
-			PlateLocate::startPR(stdpath, currPlates);
+			
+			start = clock();//计算时间
+			bool isBatchTest = true;
+			PR->startPR(stdpath, isBatchTest);
+
+			finish = clock();
+			totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+			qDebug() << "this function running time is " << totaltime << "s!";
+			alltime += totaltime;
+			totaltime = 0;
+
 		}
+		//PR->xMainNode.writeToFile(resultPath.c_str());
+		(*PR).xMainNode.writeToFile((*PR).resultPath.c_str());
+		qDebug() << "averge  running time is " << alltime/ imgTotalCount << "s!";
+
 }
 
 void Controler::slotStartTrain(const QString &posiPath, const QString &negaPath, const QString &saveModelPath) {
@@ -137,10 +159,14 @@ void Controler::slotModelTest(const QString &testSamplePath) {
 }
 
 
+
+
 CPlate::CPlate()
 {
+
 }
 
 CPlate::~CPlate()
 {
+
 }
