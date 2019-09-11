@@ -5,6 +5,8 @@ enum plateSize
 	//BIG =1
 	//MID =0
 };
+
+
 enum CharType { CHINESE,LETTER,LETTER_NUM };
 	class CPlate;
 	/**

@@ -22,6 +22,17 @@ PlateLocate::PlateLocate()
 PlateLocate::~PlateLocate()
 {
 }
+
+CPlate::CPlate()
+{
+
+}
+
+CPlate::~CPlate()
+{
+
+}
+
 ///int PlateLocate::platecout = 0;
 std::string PlateLocate::tempPath = "D:/VS/CPR/recoPlate/";//识别车牌的保持路径
 

@@ -41,14 +41,20 @@ public:
     QWidget *tab;
     QGridLayout *gridLayout;
     QVBoxLayout *verticalLayout_2;
+    QHBoxLayout *horizontalLayout_3;
+    QLabel *totalCount;
+    QLabel *currCount;
+    QLabel *tipLabel;
+    QSpacerItem *horizontalSpacer;
     QHBoxLayout *horizontalLayout;
-    QLabel *label;
+    QLabel *imgLabel;
     QVBoxLayout *verticalLayout;
     QLabel *label_2;
     QLabel *label_3;
     QLabel *label_4;
     QLabel *label_5;
     QHBoxLayout *horizontalLayout_2;
+    QPushButton *chooseImgBtn;
     QPushButton *readImgBtn;
     QPushButton *nextBtn;
     QPushButton *batchTestBtn;
@@ -104,21 +110,52 @@ public:
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setSpacing(6);
         verticalLayout_2->setObjectName(QStringLiteral("verticalLayout_2"));
+        horizontalLayout_3 = new QHBoxLayout();
+        horizontalLayout_3->setSpacing(6);
+        horizontalLayout_3->setObjectName(QStringLiteral("horizontalLayout_3"));
+        totalCount = new QLabel(tab);
+        totalCount->setObjectName(QStringLiteral("totalCount"));
+
+        horizontalLayout_3->addWidget(totalCount);
+
+        currCount = new QLabel(tab);
+        currCount->setObjectName(QStringLiteral("currCount"));
+
+        horizontalLayout_3->addWidget(currCount);
+
+        tipLabel = new QLabel(tab);
+        tipLabel->setObjectName(QStringLiteral("tipLabel"));
+        tipLabel->setEnabled(true);
+
+        horizontalLayout_3->addWidget(tipLabel);
+
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_3->addItem(horizontalSpacer);
+
+        horizontalLayout_3->setStretch(0, 1);
+        horizontalLayout_3->setStretch(1, 1);
+        horizontalLayout_3->setStretch(2, 1);
+        horizontalLayout_3->setStretch(3, 1);
+
+        verticalLayout_2->addLayout(horizontalLayout_3);
+
         horizontalLayout = new QHBoxLayout();
         horizontalLayout->setSpacing(6);
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
-        label = new QLabel(tab);
-        label->setObjectName(QStringLiteral("label"));
+        imgLabel = new QLabel(tab);
+        imgLabel->setObjectName(QStringLiteral("imgLabel"));
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
-        sizePolicy.setHeightForWidth(label->sizePolicy().hasHeightForWidth());
-        label->setSizePolicy(sizePolicy);
-        label->setMinimumSize(QSize(0, 0));
-        label->setLayoutDirection(Qt::LeftToRight);
-        label->setScaledContents(true);
+        sizePolicy.setHeightForWidth(imgLabel->sizePolicy().hasHeightForWidth());
+        imgLabel->setSizePolicy(sizePolicy);
+        imgLabel->setMinimumSize(QSize(0, 0));
+        imgLabel->setLayoutDirection(Qt::LeftToRight);
+        imgLabel->setPixmap(QPixmap(QString::fromUtf8(":/Img/Resources/Img/name.png")));
+        imgLabel->setScaledContents(true);
 
-        horizontalLayout->addWidget(label);
+        horizontalLayout->addWidget(imgLabel);
 
         verticalLayout = new QVBoxLayout();
         verticalLayout->setSpacing(6);
@@ -155,6 +192,11 @@ public:
         horizontalLayout_2 = new QHBoxLayout();
         horizontalLayout_2->setSpacing(6);
         horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
+        chooseImgBtn = new QPushButton(tab);
+        chooseImgBtn->setObjectName(QStringLiteral("chooseImgBtn"));
+
+        horizontalLayout_2->addWidget(chooseImgBtn);
+
         readImgBtn = new QPushButton(tab);
         readImgBtn->setObjectName(QStringLiteral("readImgBtn"));
 
@@ -173,6 +215,9 @@ public:
 
         verticalLayout_2->addLayout(horizontalLayout_2);
 
+        verticalLayout_2->setStretch(0, 1);
+        verticalLayout_2->setStretch(1, 14);
+        verticalLayout_2->setStretch(2, 1);
 
         gridLayout->addLayout(verticalLayout_2, 0, 0, 1, 1);
 
@@ -317,7 +362,7 @@ public:
 
         retranslateUi(CPRClass);
 
-        tabWidget->setCurrentIndex(2);
+        tabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(CPRClass);
@@ -326,12 +371,16 @@ public:
     void retranslateUi(QMainWindow *CPRClass)
     {
         CPRClass->setWindowTitle(QApplication::translate("CPRClass", "CPR", Q_NULLPTR));
-        label->setText(QApplication::translate("CPRClass", "\345\216\237\345\233\276", Q_NULLPTR));
+        totalCount->setText(QApplication::translate("CPRClass", "\345\233\276\347\211\207\346\200\273\346\225\260", Q_NULLPTR));
+        currCount->setText(QApplication::translate("CPRClass", "TextLabel", Q_NULLPTR));
+        tipLabel->setText(QApplication::translate("CPRClass", "TextLabel", Q_NULLPTR));
+        imgLabel->setText(QString());
         label_2->setText(QApplication::translate("CPRClass", "\345\256\232\344\275\215\350\275\246\347\211\2141", Q_NULLPTR));
         label_3->setText(QApplication::translate("CPRClass", "\350\275\246\347\211\214\345\255\227\347\254\2461", Q_NULLPTR));
         label_4->setText(QApplication::translate("CPRClass", "\350\275\246\347\211\214\345\233\276\345\203\2172", Q_NULLPTR));
         label_5->setText(QApplication::translate("CPRClass", "\350\275\246\347\211\214\345\255\227\347\254\2462", Q_NULLPTR));
-        readImgBtn->setText(QApplication::translate("CPRClass", "\350\257\273\345\217\226\345\233\276\347\211\207", Q_NULLPTR));
+        chooseImgBtn->setText(QApplication::translate("CPRClass", "\351\200\211\345\217\226\345\215\225\345\274\240\346\210\226\345\244\232\345\274\240\345\233\276\347\211\207", Q_NULLPTR));
+        readImgBtn->setText(QApplication::translate("CPRClass", "\351\200\211\345\217\226\345\233\276\347\211\207\347\233\256\345\275\225", Q_NULLPTR));
         nextBtn->setText(QApplication::translate("CPRClass", "\344\270\213\344\270\200\345\274\240", Q_NULLPTR));
         batchTestBtn->setText(QApplication::translate("CPRClass", "\346\211\271\351\207\217\346\265\213\350\257\225", Q_NULLPTR));
         tabWidget->setTabText(tabWidget->indexOf(tab), QApplication::translate("CPRClass", "\344\270\273\351\241\265\351\235\242", Q_NULLPTR));

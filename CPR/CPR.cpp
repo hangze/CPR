@@ -13,30 +13,65 @@ CPR::CPR(QWidget *parent)
 	ui.saveModelPath->setText("D:/VS/CPR/model");
 	ui.chooseModelPath->setText("D:/VS/CPR/model");
 	ui.testSamplePath->setText("D:/VS/CPR/testplate");
+	//ui.tipLabel->setText("请");
+	ui.tipLabel->setVisible(false);
+	//ui.imgLabel->setPixmap();
+	slotShowCurrCount(0);
+	slotShowTotalCount(0);
 
 
-
-	connect(ui.readImgBtn, SIGNAL(clicked()), this, SLOT(slotReadImgBtn()));
+	connect(ui.readImgBtn, SIGNAL(clicked()), this, SLOT(slotChooseDirBtn()));
 	connect(ui.nextBtn, SIGNAL(clicked()), this, SLOT(slotNextBtn()));
 	connect(ui.batchTestBtn, SIGNAL(clicked()), this, SLOT(slotBatchTestBtn()));
 	connect(ui.startTrainBtn, SIGNAL(clicked()), this, SLOT(slotStartTrainBtn()));
 	connect(ui.modelTestBtn, SIGNAL(clicked()), this, SLOT(slotModelTestBtn()));
-	//connect( )
+	connect(ui.chooseImgBtn, SIGNAL(clicked()), this,SLOT(slotChooseImgBtn()));
+
 	
 }
 
-void CPR::slotReadImgBtn() {
-	QString *imgDirectory=new QString;
-	*imgDirectory = QFileDialog::getExistingDirectory(this, trUtf8("请选择车牌图片文件夹 ")); //由于编码问题，多了一个空格
-	if (imgDirectory->isEmpty()) {
+
+void CPR::slotShowTotalCount(int totalCount) {
+	QString title = "图片总数:  " + QString::number(totalCount)+"张";
+	qDebug() << title;
+	ui.totalCount->setText(title);
+}
+void CPR::slotShowCurrCount(int currCount) {
+	QString title = "当前图片:  第" + QString::number(currCount) + "张";
+	qDebug() << title;
+	ui.currCount->setText(title);
+}
+
+
+//选取图片按钮被点击
+void CPR::slotChooseImgBtn() {
+	qDebug() << "slotChooseImgBtn";
+	QStringList imgNames =QFileDialog::getOpenFileNames(this, "请选择单张或多张车牌图片","","Images (*.png *.jpg)");
+	if (imgNames.empty()) {
+		QMessageBox messageBox;
+		messageBox.setWindowTitle("图片未选中");
+		messageBox.setText("请重新选择图片");
+		messageBox.exec();
+		return;
+	}
+	emit chooseImgBtnClicked(imgNames);
+}
+
+
+void CPR::slotChooseDirBtn() {
+	
+	QString imgDirectory;
+	imgDirectory = QFileDialog::getExistingDirectory(this, trUtf8("请选择车牌图片文件夹 ")); //由于编码问题，多了一个空格
+	if (imgDirectory.isEmpty()) {
 		QMessageBox messageBox;
 		messageBox.setWindowTitle("文件夹未选中");
 		messageBox.setText("请重新选择图片文件夹 "); //由于编码问题，多了一个空格
 		messageBox.exec();
 		return;
 	}
-
+	
 	emit readImgBtnClicked(imgDirectory);
+	//emit readImgBtnClicked(chooseDirectory(QString(""),"图片"));
 }
 
 
@@ -51,8 +86,8 @@ void CPR::slotBatchTestBtn() {
 	#ifdef DEBUG
 		if (1)qDebug() << "slotBatchTestBtn";
 	#endif // DEBUG
-		slotReadImgBtn();
-	emit batchTestClicked();
+		slotChooseDirBtn();
+	emit batchTestBtnClicked();
 }
 
 void CPR::slotStartTrainBtn() {
@@ -60,12 +95,12 @@ void CPR::slotStartTrainBtn() {
 	if (1)qDebug() << "slotStartTrainBtn";
 #endif // DEBUG
 	//QString posiPath = ui.posiPath->text();
-	emit startTrainClicked(ui.posiPath->text(), ui.negaPath->text(), ui.saveModelPath->text());
+	emit startTrainBtnClicked(ui.posiPath->text(), ui.negaPath->text(), ui.saveModelPath->text());
 }
 void CPR::slotModelTestBtn() {
 	qDebug() << "slotModelTestBtn";
 	ui.testSamplePath->text();
-	emit modelTestClicked(ui.testSamplePath->text());
+	emit modelTestBtnClicked(ui.testSamplePath->text());
 }
 
 void CPR::slotShowImg(const QImage &img) {
@@ -81,7 +116,7 @@ void CPR::slotShowImg(const QImage &img) {
 	qimg = QImage((const unsigned char*)(cvimg.data), cvimg.cols, cvimg.rows, QImage::Format_RGB888);
 	*/
 
-	ui.label->setPixmap(QPixmap::fromImage(img));
+	ui.imgLabel->setPixmap(QPixmap::fromImage(img));
 	
 }
 void CPR::slotShowMessage(const QString &message, const QString &title) {
@@ -91,22 +126,24 @@ void CPR::slotShowMessage(const QString &message, const QString &title) {
 	messageBox.exec();
 }
 
-QString CPR::chooseDirectory(const QString &directory) {
+QString CPR::chooseDirectory(const QString &directory,const QString &dirType) {
 	
-	QString *imgDirectory = new QString;
-	*imgDirectory = QFileDialog::getExistingDirectory(this, trUtf8("请选择文件夹 "),directory); //由于编码问题，多了一个空格
-	if (imgDirectory->isEmpty()) {
+	QString imgDirectory;
+	imgDirectory = QFileDialog::getExistingDirectory(this, "请选择" + dirType+"文件夹 ",directory); //由于编码问题，多了一个空格
+	if (imgDirectory.isEmpty()) {
 		QMessageBox messageBox;
-		messageBox.setWindowTitle("文件夹未选中");
-		messageBox.setText("请重新选择文件夹 "); //由于编码问题，多了一个空格
+		messageBox.setWindowTitle(dirType+"文件夹未选中");
+		messageBox.setText("请重新选择"+dirType+"文件夹 "); //由于编码问题，多了一个空格
 		messageBox.exec();
 		return directory;
 	}
 	else
 	{
-		return *imgDirectory;
+		return imgDirectory;
 	}
 }
+
+
 
 
 void CPR::on_posPathBtn_clicked() {

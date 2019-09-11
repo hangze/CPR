@@ -45,21 +45,46 @@ Controler::Controler(QObject *parent)
 Controler::~Controler()
 {
 }
-void Controler::slotReadImgList( QString *Directory) {
+void Controler::slotReadImgList( QString Directory) {
 	
 	#ifdef DEBUG
 		qDebug() << "slotReadImgList";
 	#endif // DEBUG
 
 	//获取文件名列表
-	*imgDirectory = *Directory+"/";
-	QDir dir(*imgDirectory);
+	QString imgDirectory = Directory+"/";
+	QDir dir(imgDirectory);
+	if (!dir.exists())
+		qWarning("Cannot find the example directory");
+
 	QStringList nameFiters;
 	nameFiters << "*.jpg" << "*.png";
-	imgNameList = dir.entryList(nameFiters, QDir::Files | QDir::Readable, QDir::Name);
-	setCurrImgCount(0);
-	setImgTotalCount(imgNameList.size());
+	QStringList nameList;
 	
+	nameList = dir.entryList(nameFiters, QDir::Files | QDir::Readable, QDir::Name);
+	std::string directory=imgDirectory.toStdString();
+	//更新图片路径表
+	vecImgPath.clear();
+	for (int i = 0; i < nameList.size(); i++) {
+		std::string imgPathName = directory + nameList[i].toStdString();
+		vecImgPath.push_back(imgPathName);
+	}
+
+	setCurrImgCount(0);
+	setImgTotalCount(nameList.size());
+
+}
+
+//处理文件名列表中的文件
+void Controler::slotReadImgList(const QStringList &PathList) {
+	qDebug() << "slotReadImgList";
+	vecImgPath.clear();
+	for (int i = 0; i < PathList.size(); i++) {
+		std::string imgPath = PathList[i].toStdString();
+	}
+	setCurrImgCount(0);
+	setImgTotalCount(PathList.size());
+	//imgPathList
 }
 
 void Controler::slotProcessImg() {
@@ -70,12 +95,9 @@ void Controler::slotProcessImg() {
 	
 	else {//有图片未处理
 		
-		QString path = *imgDirectory + imgNameList[currImgCount];
+		std::string stdpath = vecImgPath[currImgCount];
 		currImgCount++;
-
-		std::string stdpath = path.toLocal8Bit();//转化为本地字符，与源文件编码方式相关
-		PR->startPR(stdpath);
-		
+		PR->startPR(stdpath);		
 	}
 	
 }
@@ -86,8 +108,8 @@ void Controler::showImg(const cv::Mat &img) {
 	cv::cvtColor(img, tempImg, cv::COLOR_BGR2RGB);
 	//cv::resize(img, img, cv::Size(1280, 720));
 	//static QImage tempImg2;
-	tempImg2= QImage((const unsigned char *)(tempImg.data), tempImg.cols, tempImg.rows, QImage::Format_RGB888);
-	emit signalShowImg(tempImg2); 
+	plateImg= QImage((const unsigned char *)(tempImg.data), tempImg.cols, tempImg.rows, QImage::Format_RGB888);
+	emit signalShowImg(plateImg);
 }
 //void Controler::showPlateImg(const cv::Mat &img) {
 //
@@ -104,13 +126,13 @@ void Controler::slotBatchTest() {
 
 		while (imgTotalCount > 0 && currImgCount < imgTotalCount&&currImgCount >= 0)
 		{
-			QString  path = *imgDirectory + imgNameList[currImgCount];
+			std::string stdpath = vecImgPath[currImgCount];
 			
 			//std::string directory = (*imgDirectory).toLocal8Bit();
 			//std::string imgName = imgNameList[currImgCount].toLocal8Bit();
 			currImgCount++;
 
-			std::string stdpath = path.toLocal8Bit();//转化为本地字符，与源文件编码方式相关
+			//std::string stdpath = path.toLocal8Bit();//转化为本地字符，与源文件编码方式相关
 			
 			start = clock();//计算时间
 			bool isBatchTest = true;
@@ -125,7 +147,7 @@ void Controler::slotBatchTest() {
 		}
 		//PR->xMainNode.writeToFile(resultPath.c_str());
 		(*PR).xMainNode.writeToFile((*PR).resultPath.c_str());
-		qDebug() << "averge  running time is " << alltime/ imgTotalCount << "s!";
+		qDebug() << "averge  running time is " << float(alltime)/ imgTotalCount << "s!";
 
 }
 
@@ -159,14 +181,3 @@ void Controler::slotModelTest(const QString &testSamplePath) {
 }
 
 
-
-
-CPlate::CPlate()
-{
-
-}
-
-CPlate::~CPlate()
-{
-
-}

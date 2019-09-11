@@ -1,4 +1,6 @@
 <RCC>
-    <qresource prefix="CPR">
-    </qresource>
+  <qresource prefix="CPR"/>
+  <qresource prefix="Img">
+    <file>Resources/Img/name.png</file>
+  </qresource>
 </RCC>
