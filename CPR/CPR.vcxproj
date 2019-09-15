@@ -121,8 +121,10 @@
     </QtRcc>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CharsSegment.cpp" />
     <ClCompile Include="CNNRecognizer.cpp" />
     <ClCompile Include="Controler.cpp" />
+    <ClCompile Include="CPlate.cpp" />
     <ClCompile Include="CPR.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
@@ -131,12 +133,15 @@
     <ClCompile Include="LBP.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlateLocate.cpp" />
+    <ClCompile Include="PR_Flow.cpp" />
+    <ClCompile Include="Score.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="SVMJudge.cpp" />
     <ClCompile Include="thirdparty\xmlParser\xmlParser.cpp" />
+    <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="CPR.h" />
@@ -148,13 +153,17 @@
     <QtRcc Include="CPR.qrc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="accuracy.h" />
     <ClInclude Include="backupSource.h" />
+    <ClInclude Include="CharsSegment.h" />
     <ClInclude Include="CNNRecognizer.h" />
+    <ClInclude Include="CPlate.h" />
     <ClInclude Include="GenernalRecognizer.h" />
     <ClInclude Include="LBP.h" />
+    <ClInclude Include="PR_Flow.h" />
+    <ClInclude Include="Score.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SVMJudge.h" />
+    <ClInclude Include="thirdparty\xmlParser\xmlParser.h" />
     <ClInclude Include="util.h" />
     <QtMoc Include="Controler.h" />
     <ClInclude Include="PlateLocate.h" />

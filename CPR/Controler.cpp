@@ -4,6 +4,7 @@
 #include"PlateLocate.h"
 #include<qtextcodec.h>
 #include"SVMJudge.h"
+
 #define DEBUG
 
 //获得静态成员，用于自动析构单例
@@ -38,13 +39,14 @@ Controler::Controler(QObject *parent)
 {
 	currImgCount = 0;
 	imgTotalCount = 0;
-	PR = new PlateLocate();
+	//PR = new PlateLocate();
 
 }
 
 Controler::~Controler()
 {
 }
+//由路径得到图片文件名列表
 void Controler::slotReadImgList( QString Directory) {
 	
 	#ifdef DEBUG
@@ -69,18 +71,19 @@ void Controler::slotReadImgList( QString Directory) {
 		std::string imgPathName = directory + nameList[i].toStdString();
 		vecImgPath.push_back(imgPathName);
 	}
-
+	
 	setCurrImgCount(0);
 	setImgTotalCount(nameList.size());
 
 }
 
-//处理文件名列表中的文件
+//得到图片文件名列表
 void Controler::slotReadImgList(const QStringList &PathList) {
 	qDebug() << "slotReadImgList";
 	vecImgPath.clear();
 	for (int i = 0; i < PathList.size(); i++) {
 		std::string imgPath = PathList[i].toStdString();
+		vecImgPath.push_back(imgPath);
 	}
 	setCurrImgCount(0);
 	setImgTotalCount(PathList.size());
@@ -97,7 +100,7 @@ void Controler::slotProcessImg() {
 		
 		std::string stdpath = vecImgPath[currImgCount];
 		currImgCount++;
-		PR->startPR(stdpath);		
+		PRFlow.startPR(stdpath);		
 	}
 	
 }
@@ -119,36 +122,8 @@ void Controler::showImg(const cv::Mat &img) {
 void Controler::slotBatchTest() {
 	#ifdef DEBUG
 		if (1)qDebug() << "slotBatchTest";
-	#endif // DEBUG
-
-		clock_t start, finish;
-		
-
-		while (imgTotalCount > 0 && currImgCount < imgTotalCount&&currImgCount >= 0)
-		{
-			std::string stdpath = vecImgPath[currImgCount];
-			
-			//std::string directory = (*imgDirectory).toLocal8Bit();
-			//std::string imgName = imgNameList[currImgCount].toLocal8Bit();
-			currImgCount++;
-
-			//std::string stdpath = path.toLocal8Bit();//转化为本地字符，与源文件编码方式相关
-			
-			start = clock();//计算时间
-			bool isBatchTest = true;
-			PR->startPR(stdpath, isBatchTest);
-
-			finish = clock();
-			totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-			qDebug() << "this function running time is " << totaltime << "s!";
-			alltime += totaltime;
-			totaltime = 0;
-
-		}
-		//PR->xMainNode.writeToFile(resultPath.c_str());
-		(*PR).xMainNode.writeToFile((*PR).resultPath.c_str());
-		qDebug() << "averge  running time is " << float(alltime)/ imgTotalCount << "s!";
-
+	#endif // DEBUG	
+			PRFlow.batchTest(vecImgPath);
 }
 
 void Controler::slotStartTrain(const QString &posiPath, const QString &negaPath, const QString &saveModelPath) {
@@ -180,4 +155,12 @@ void Controler::slotModelTest(const QString &testSamplePath) {
 	qDebug() <<u8"正确率="<< float(plates) / posImgNameList.size();
 }
 
-
+void Controler::setPlateImg(const cv::Mat &img) {
+	qDebug() << "setPlateImg";
+	cv::Mat tempPlateImg;
+	cv::cvtColor(img, tempPlateImg, cv::COLOR_BGR2RGB);
+	//cv::resize(img, img, cv::Size(1280, 720));
+	//static QImage tempImg2;
+	plateImg = QImage((const unsigned char *)(tempPlateImg.data), tempPlateImg.cols, tempPlateImg.rows, QImage::Format_RGB888);
+	emit signalShowImg(plateImg);
+}

@@ -3,9 +3,10 @@
 #include "PlateLocate.h"
 #include "Controler.h"
 #include<util.h>
-#include"SVMJudge.h"
+
 #include"CNNRecognizer.h"
-#include"accuracy.h"
+#include"CPlate.h"
+#include"CharsSegment.h"
 //extern Controler *controler;
 #define DEBUG 1
 //macro config
@@ -18,63 +19,38 @@ PlateLocate::PlateLocate()
 
 }
 
-
 PlateLocate::~PlateLocate()
 {
 }
 
-CPlate::CPlate()
-{
-
-}
-
-CPlate::~CPlate()
-{
-
-}
 
 ///int PlateLocate::platecout = 0;
 std::string PlateLocate::tempPath = "D:/VS/CPR/recoPlate/";//识别车牌的保持路径
 
+
+void batchTest(std::vector<std::string> vecPath) {
+
+}
+
 /**
- * @brief 开始车牌识别 
- * 车牌识别的入口
- * @param path      车牌图像的路径
- * @param plate     车牌信息结果
+ * @brief 车牌定位
+ * 车牌定位的入口
+ * @param srcImg      原图
+ * @param currCPlate     当前车牌信息
  *
  * @return 是否定位成功
  *     -<em>false</em> 定位成功
  *     -<em>true</em> 定位失败
  */
-bool PlateLocate::startPR(const std::string &path,bool isBatchTest) {
-	
-
-
-
-
-	#ifdef DEBUG
-		qDebug() << "startPR";
-	#endif // DEBUG
-	
-	srcImg = cv::imread(path);
+bool PlateLocate::locate(cv::Mat srcImg,std::vector<CPlate> &currCPlates) {
 	currSize = srcImg.size();
-	
-	/*
-	cv::Mat tempImg3;
-	sobelOpert(srcImg, tempImg3, cv::Size(3, 3));
-	return true;*/
-	if (!srcImg.data) {
-		Controler::getControler()->ShowMessage("图片读取失败");
-		return false;
-	}
-	
 	cv::Mat tempImg;
 	preProcess(srcImg, tempImg);
 
 	Controler::getControler()->showImg(tempImg);
 	std::vector<cv::RotatedRect> rotatedRects;
 	//sobelResearch(tempImg, rotatedRects);//改动
-	sobelResearch(tempImg, rotatedRects);
+	sobelResearch(tempImg, rotatedRects,currCPlates);
 	
 	/*
 	if (rotatedRects.size() == 0) {
@@ -86,242 +62,16 @@ bool PlateLocate::startPR(const std::string &path,bool isBatchTest) {
 
 	//plateJudge(srcImg, rotatedRects);
 
-	if (currPlates.empty()) {
+	if (currCPlates.empty()) {
 		//cv::imwrite(path + "false.jpg", srcImg);
 		return false;//如果识别的车牌数为空，返回false
 	}
 
-	//accuracy
-	std::string directory=path.substr(0,path.find_last_of("/"));
-	std::string imageName = path.substr(path.find_last_of("/")+1,  9);
-	std::string resultPath = directory + "/Result.xml";
-	if (isBatchTest) {
-		//if(currImgCount==1)xmlNode.clear();
-		
-		XMLNode xNode, rectangleNodes;
-		xNode = xMainNode.addChild("image");
-		xNode.addChild("imageName").addText(imageName.c_str());
-		rectangleNodes = xNode.addChild("taggedRectangles");
-		
-		for (int i = 0; i < currPlates.size(); i++) {
-			XMLNode rectangleNode = rectangleNodes.addChild("taggedRectangle");
-			CPlate currPlate = currPlates[i];
-			
-			cv::RotatedRect rotatedRect = currPlate.getRotatedRect();
-			rectangleNode.addAttribute("x=", std::to_string(int(rotatedRect.center.x)).c_str());
-			rectangleNode.addAttribute("y=", std::to_string(int(rotatedRect.center.y)).c_str());
-			rectangleNode.addAttribute("width=", std::to_string(int(rotatedRect.size.width)).c_str());
-			rectangleNode.addAttribute("height=", std::to_string(int(rotatedRect.size.height)).c_str());
-			rectangleNode.addAttribute("rotattion=", std::to_string(int(rotatedRect.angle)).c_str());
-			std::string platechars= currPlate.getPlateChars();
-			if (platechars.empty()) {
-				platechars = u8"未A00000";
-			}
-			rectangleNode.addText(platechars.c_str());
-		}
-		recoCPlateMap[imageName] = currPlates;
-		//compare with GroundTruth File
-		if (Controler::getControler()->getCurrImgCount()==254) {
-			XMLNode::setGlobalOptions(XMLNode::char_encoding_UTF8);
-			std::string GroundTruthPath = directory+"/GroundTruth_others.xml";
-			std::map<std::string, std::vector<CPlate>> GTCPlateMap;
-			getGroundTruth(GroundTruthPath, GTCPlateMap);
-			//recoCPlateMap.clear();
-			//GroundTruthPath = directory + "/Result.xml";
-			//getGroundTruth(GroundTruthPath, recoCPlateMap);
-
-
-			int detectPlateCount = 0;//定位出的车牌总数
-			int noDetectPlateCount = 0;
-			int locateCorrectPlateCount = 0;//定位正确的车牌总数			
-			std::vector<float>icdar2003_precise_all;//准确率，即全部识别车牌的最佳匹配度的积分/全部识别车牌数
-			float pricise = 0;//定位准确率
-
-			
-			int recoPlateCount = 0;//识别出字符的车牌总数
-			int zeroErrorRecoPlateCount = 0;//零字符差错的车牌总数
-			int oneErrorRecoPlateCount = 0;//1字符差错的车牌总数
-			int errorRecoPlateCount = 0;
-			int gtPlateCount=0;//标准车牌总数
-			int chineseCorrectCount = 0;//中文正确数
-			float recall=0;
-			std::vector<float>icdar2003_recall_all;//查全率，即全部标准车牌的最佳匹配度的积分/全部标准车牌数
-			
-												   //计算定位准确率及字符准确率  每一张标准车牌的匹配度的积分/标准车牌数			
-			std::map<std::string, std::vector<CPlate>>::iterator mapIter = recoCPlateMap.begin();
-			for (; mapIter != recoCPlateMap.end(); mapIter++) {
-				std::string imgName = mapIter->first;
-				std::vector<CPlate> vecRecoCPlate = mapIter->second;
-				//std::vector<CPlate> gtVecCPlate = GTCPlateMap[imgName];
-				std::map<std::string, std::vector<CPlate>>::iterator it = GTCPlateMap.find(imgName);
-				std::vector<CPlate> gtVecCPlate;
-				if (it != GTCPlateMap.end()) {
-					gtVecCPlate = it->second;
-				}
-
-
-				for (auto recoPlate : vecRecoCPlate) {
-					detectPlateCount++;
-					std::string recoChars = recoPlate.getPlateChars();
-					cv::RotatedRect recoRRect = recoPlate.plateRotaRect;
-					cv::Rect_<float> recoRect;
-					util::calcSafeRect(recoRRect, recoPlate.srcImg, recoRect);
-					float bestMatch = 0.f;
-					CPlate matchCPlate;
-					
-					//std::string gtChars;
-					for (auto gtPlate : gtVecCPlate) {
-						//std::string gtChars = gtPlate.getPlateChars();
-						cv::RotatedRect gtRRect = gtPlate.plateRotaRect;
-						cv::Rect_<float> gtRect;
-						util::calcSafeRect(gtRRect, gtPlate.srcImg, gtRect);
-						gtRect = gtPlate.plateRotaRect.boundingRect();
-						//计算最佳匹配度
-												
-						cv::Rect interRRect = recoRect & gtRect;
-						float match = float(2 * interRRect.area()) / (recoRect.area() + gtRect.area());
-						if ((match - bestMatch )> 0.1f) {
-							bestMatch = match;
-							matchCPlate =gtPlate;
-						}
-					}
-					icdar2003_precise_all.push_back(bestMatch);
-					
-				}
-				
-				
-				
-
-			}
-			if (icdar2003_precise_all.size() > 0) {
-				pricise = std::accumulate(icdar2003_precise_all.begin(),
-					icdar2003_precise_all.end(), 0.0) / icdar2003_precise_all.size();
-			}
-
-
-			//计算查全率 每一张识别车牌的最佳匹配度的积分/识别车牌数
-			std::map < std::string, std::vector<CPlate>>::iterator gtIter = GTCPlateMap.begin();
-			for (; gtIter != GTCPlateMap.end(); gtIter++) {
-				std::string gtImgName = gtIter->first;
-				std::vector<CPlate> gtVecCPlate = gtIter->second;
-				std::map<std::string, std::vector<CPlate>>::iterator it = recoCPlateMap.find(gtImgName);
-				std::vector<CPlate> recoVecCPlate;
-				if (it!=recoCPlateMap.end()) {
-					recoVecCPlate =it->second ;
-				}
-				
-
-				for (auto gtCPlate : gtVecCPlate) {
-					gtPlateCount++;
-					std::string gtImgName=gtCPlate.getPlateChars();
-					//gtImgName = gtImgName.substr(gtImgName.find(":"));
-					cv::RotatedRect gtRRect = gtCPlate.plateRotaRect;
-					cv::Rect_<float> gtRect;
-					util::calcSafeRect(gtRRect, gtCPlate.srcImg, gtRect);
-					gtRect = gtCPlate.plateRotaRect.boundingRect();
-
-					std::string recoImgName;
-					float bestMatch = 0.;
-					CPlate matchCPlate;
-					for (auto recoCPlate : recoVecCPlate) {
-						
-						cv::RotatedRect recoRRect = recoCPlate.plateRotaRect;
-						cv::Rect_<float> recoRect;
-						util::calcSafeRect(recoRRect, recoCPlate.srcImg, recoRect);
-						cv::Rect_<float> interRect = gtRect & recoRect;
-						float match = float(2*interRect.area())/(gtRect.area()+recoRect.area());
-						if ((match - bestMatch) > 0.1f) {
-							bestMatch = match;
-							matchCPlate = recoCPlate;
-							recoImgName = recoCPlate.getPlateChars();
-						}
-					}
-					
-					icdar2003_recall_all.push_back(bestMatch);
-					//判断字符差异
-					if(&matchCPlate&&bestMatch>0.4f&&recoImgName!=""){
-						recoPlateCount++;
-						int diff = util::levenshtein_distance(gtImgName, recoImgName);
-						if (diff == 0) {
-							zeroErrorRecoPlateCount++;
-							//recoPlateCount++;
-						}
-						else if(diff==1)
-						{
-							oneErrorRecoPlateCount++;
-							//recoPlateCount++;
-						}
-						else
-						{
-							errorRecoPlateCount++;
-						}
-						if (gtCPlate.getPlateChars().substr(0, 1) == matchCPlate.getPlateChars().substr(0, 1)) {
-							chineseCorrectCount++ ;
-						}
-					}
-					else
-					{
-						noDetectPlateCount++;
-					}
-				}					
-			}
-			//计算查全率
-			recall = std::accumulate(icdar2003_recall_all.begin(), icdar2003_recall_all.end(), 0.0)/icdar2003_recall_all.size();
-			float fScore = 2 * pricise*recall / (pricise + recall);
-			
-			float zeroErrorRate =0;
-			float oneErrorRate =0;
-			float ChineseCorrectRate = 0;
-			if (recoPlateCount != 0) {
-				 zeroErrorRate = float(zeroErrorRecoPlateCount) / recoPlateCount;
-				 oneErrorRate = float(oneErrorRecoPlateCount) / recoPlateCount;
-				 ChineseCorrectRate = float(chineseCorrectCount) / recoPlateCount;
-			}
-			
-			std::stringstream img_ss(std::stringstream::in | std::stringstream::out);
-			std::string time = util::getTimeString();
-			img_ss << time<<std::endl;
-			int plateCount = Controler::getControler()->getImgTotalCount();
-			img_ss << "图片总数:" << plateCount <<"    ";
-			img_ss << "车牌总数:" << gtPlateCount<<"    ";
-			img_ss << "未检出车牌总数:" << noDetectPlateCount << "    ";
-			img_ss << "检出率:" << (float(gtPlateCount - noDetectPlateCount) / gtPlateCount) * 100 << "%" << std::endl;
-			img_ss << "准确率:" << pricise * 100 << "%" << "    ";
-			img_ss << "查全率:" << recall * 100 << "%" << "    ";
-			img_ss << "F 值:" << fScore *100<<"%"<< std::endl;
-			
-			img_ss << "0字符差错正确率:" << zeroErrorRate * 100 << "%" << "    ";
-			img_ss << "1字符差错正确率:" << oneErrorRate * 100 << "%" << "    ";
-			img_ss << "中文字符正确率:" << ChineseCorrectRate * 100 << "%" << std::endl;
-			int alltime = Controler::getControler()->alltime;
-			img_ss << "总时间：" << alltime << "s      " << "平均执行时间：" << float(alltime) / plateCount << "s"<<std::endl;
-			std::string temp;
-			temp=img_ss.str();
-			std::ofstream out("result/accuracy.txt",std::ios::app);
-			if (out) {
-				out << temp;
-			}
-			out.close();
-			qDebug() << temp.c_str();
-		}
-		
-	}
-	
-
-
-
- 	currPlates.clear();
-	#ifdef DEBUG	
-		qDebug() << "paltecout=" << platecout;//显示当前已定位的车牌数
-	#endif // DEBUG
-
-		/*
-		if (currPlates.plateImgs.empty())return 0;//K均值聚类分割图像，效果不佳，暂时不用
-		kMean(currPlates.plateImgs[0], cv::Size(3, 3), 3);
-		currPlates.plateImgs.clear();
-		*/
-	
-
+	/*
+	if (currPlates.plateImgs.empty())return 0;//K均值聚类分割图像，效果不佳，暂时不用
+	kMean(currPlates.plateImgs[0], cv::Size(3, 3), 3);
+	currPlates.plateImgs.clear();
+	*/	
 		
 	//显示效果
 	#ifdef DEBUG
@@ -555,41 +305,6 @@ void PlateLocate::spatialOstu(cv::Mat &inputOutputImg, float persent, int grid_x
 	}
 }
 
-void PlateLocate::spatialOstu1(cv::Mat &inputOutputImg, float persent, int grid_x, int grid_y) {
-	cv::Mat src = inputOutputImg;
-	double globalSigma;
-	double globalThreshVal = util::getThreshVal_Otsu_8u(inputOutputImg, globalSigma);
-	int width = src.cols / grid_x;
-	int height = src.rows / grid_y;
-	std::vector<int> local_globalThreshVal;
-	std::vector<double> local_globalSigma;
-
-	for (int i = 0; i < grid_x; i++) {//在水平方向上分grid_x个栏，设为该栏垂直方向上的全局阈值//
-									 //效果不佳，噪声极大，检测车牌数锐减
-		cv::Mat src_cell = cv::Mat(src, cv::Range::all(), cv::Range(i * width, (i + 1) * width));
-		double tempSigma;
-		double ThreshVal = util::getThreshVal_Otsu_8u(src_cell, tempSigma);
-		local_globalSigma.push_back(tempSigma);
-		local_globalThreshVal.push_back(ThreshVal);
-	}
-
-	// iterate through grid
-	for (int j = 0; j < grid_y; j++) {
-		for (int i = 0; i < grid_x; i++) {
-			double sigma;
-			cv::Mat src_cell = cv::Mat(src, cv::Range(j * height, (j + 1) * height), cv::Range(i * width, (i + 1) * width));
-			cv::imshow("src_cell", src_cell);
-			double cellThreshVal = util::getThreshVal_Otsu_8u(src_cell, sigma);
-			
-				cv::threshold(src_cell, src_cell, cellThreshVal*1.5, 255, CV_THRESH_OTSU + CV_THRESH_BINARY);
-			
-
-			//cv::imshow("after src_cell", src_cell);
-			//cv::waitKey(0);
-		}
-	}
-}
-
 
 //判断矩形是否是字符区域的矩形
 bool PlateLocate::vertifyCharacterSizes(const cv::Rect &Rect) {
@@ -725,7 +440,7 @@ void PlateLocate::preProcess(const cv::Mat &preImg, cv::Mat &outImg) {
  */
 void PlateLocate::plateJudge(const cv::Mat &srcImg,std::vector<cv::RotatedRect> &rotatedRects) {
 	
-	SVMJudge svmJudge;
+//	SVMJudge svmJudge;
 	cv::Mat plateImg;
 	cv::Mat saveImg;
 	//char count;
@@ -734,7 +449,7 @@ void PlateLocate::plateJudge(const cv::Mat &srcImg,std::vector<cv::RotatedRect> 
 		
 		util::getRotatedRectArea(srcImg, rotatedRects[i], plateImg,false);
 		
-		if (svmJudge.startJudge(plateImg)) {
+		if (svm.startJudge(plateImg)) {
 			//currPlates.plateImgs.push_back(plateImg);
 			
 			//currPlates.rRects.push_back(rotatedRects[i]);
@@ -750,7 +465,7 @@ void PlateLocate::plateJudge(const cv::Mat &srcImg,std::vector<cv::RotatedRect> 
 }
 
 
-void PlateLocate::sobelResearch(const cv::Mat &inputImg, std::vector<cv::RotatedRect> &rRects) {
+void PlateLocate::sobelResearch(const cv::Mat &inputImg, std::vector<cv::RotatedRect> &rRects,std::vector<CPlate>&currCPlates) {
 	
 	cv::Mat grayImg;
 	cv::Mat preProceImg;//先为预处理图像，后期添加可能矩形轮廓并显示
@@ -762,11 +477,12 @@ void PlateLocate::sobelResearch(const cv::Mat &inputImg, std::vector<cv::Rotated
 	bool hitArea[DEAFAULT_GRID_X];
 	memset(hitArea, 0, sizeof(hitArea));
 	
-	sobelFrtResearch(preProceImg,sobelImg, rRects,hitArea);
+	sobelFrtResearch(preProceImg,sobelImg, rRects,currCPlates, hitArea);
+	//memset(hitArea, 0, sizeof(hitArea));
 	//if (rRects.size() <= 0)cv::imwrite("D:/VS/CPR/falseImg/" + std::to_string(Controler::getControler()->getCurrImgCount()) + ".jpg",inputImg);
-	sobelSecResearch(preProceImg,sobelImg, rRects, hitArea);//使用sobel算子及其他形态学算子查找图片剩余区域
+	sobelSecResearch(preProceImg,sobelImg, rRects,currCPlates, hitArea);//使用sobel算子及其他形态学算子查找图片剩余区域
 	//sobelRefineResearch(preProceImg, rRects);
-	findDdgeDeskew();      
+	findDdgeDeskew(currCPlates);      
 
 }
 
@@ -782,10 +498,10 @@ void PlateLocate::sobelResearch(const cv::Mat &inputImg, std::vector<cv::Rotated
  *     -<em>true</em> succeed
  */
 
-uchar PlateLocate::findDdgeDeskew() {
-	char failure = 0;//后期改为enum赋值
-	std::vector<CPlate> extendImg = currPlates;
-	std::vector<CPlate>::iterator iterBegin = currPlates.begin();
+uchar PlateLocate::findDdgeDeskew(std::vector<CPlate>&currCPlates) {
+	
+	//std::vector<CPlate> extendImg = currCPlates;
+	std::vector<CPlate>::iterator iterBegin = currCPlates.begin();
 	cv::Mat sobelXImg;
 	cv::Mat thresSobelXImg;
 	cv::Mat grayImg;
@@ -795,10 +511,12 @@ uchar PlateLocate::findDdgeDeskew() {
 	//std::vector<cv::Vec2f> lines;
 	//cv::Mat tempImg;
 
-	for (; iterBegin != currPlates.end(); iterBegin++) {
+	//for (; iterBegin != currCPlates.end(); iterBegin++) {
+	while(iterBegin!=currCPlates.end()){
+		char failure = 0;//后期改为enum赋值
 		CPlate *cPlate = &(*iterBegin);
 		cv::Mat tempImg = (*cPlate).plateImg.clone();
-
+		
 		cv::resize(tempImg, tempImg, cv::Size(136, tempImg.size().height*136/ tempImg.size().width),0,0,cv::INTER_CUBIC);
 		cv::cvtColor(tempImg, grayImg, CV_BGR2GRAY);
 		cv::Sobel(grayImg, sobelXImg, CV_16S, 1, 0);
@@ -833,7 +551,7 @@ uchar PlateLocate::findDdgeDeskew() {
 			}
 
 
-			qDebug() << i;
+			qDebug() << i<<"finddes";
 		}
 
 
@@ -1038,8 +756,34 @@ uchar PlateLocate::findDdgeDeskew() {
 
 
 		//判断点集状态，设置失败原因
-		if (upperPoints.size() < 6 || lowerPoints.size() < 6) { failure = failure | 0x01; }
-		if (leftPoints.size() < 10 || rightPoints.size() < 10) { failure = failure | 0x02; }
+		if (upperPoints.size() < 6 || lowerPoints.size() < 6) { 
+			failure = failure | 0x01; 
+			/*
+			if (iterBegin == currCPlates.begin()) {
+				iterBegin = currCPlates.erase(iterBegin);
+				iterBegin = currCPlates.begin();
+				continue;
+			}
+			else
+			{
+				iterBegin = currCPlates.erase(iterBegin);
+				continue;
+			}*/
+		}
+		if (leftPoints.size() < 10 || rightPoints.size() < 10) {
+			failure = failure | 0x02; 
+			/*
+			if (iterBegin == currCPlates.begin()) {
+				iterBegin = currCPlates.erase(iterBegin);
+				iterBegin = currCPlates.begin();
+				continue;
+			}
+			else
+			{
+				iterBegin = currCPlates.erase(iterBegin);
+				continue;
+			}*/
+		}
 		//由上下点集拟合水平线
 		cv::Vec4f upperLine;
 		cv::Vec4f lowerLine;
@@ -1047,7 +791,7 @@ uchar PlateLocate::findDdgeDeskew() {
 		cv::Vec4f rightLine;
 		std::vector<cv::Point> srcPoints;
 		std::vector<cv::Point> dstPoints;
-		if (failure == 0) {
+		if (failure == 0) {//
 			//拟合直线
 			cv::fitLine(upperPoints, upperLine, cv::DIST_HUBER, 0, 0.01, 0.01);
 			cv::fitLine(lowerPoints, lowerLine, cv::DIST_HUBER, 0, 0.01, 0.01);
@@ -1061,13 +805,33 @@ uchar PlateLocate::findDdgeDeskew() {
 			float k2 = (leftLine[1] / leftLine[0] + rightLine[1] / rightLine[0]) / 2;
 			leftLine[1] = leftLine[0] * k2;
 			rightLine[1] = rightLine[0] * k2;
-			if (k1 > 1) {
-				failure = failure & 0x01;
-				break;
+			if (k1 > 1) {//斜率过大
+				//failure = failure & 0x01;
+				if (iterBegin == currCPlates.begin()) {
+					iterBegin = currCPlates.erase(iterBegin);
+					iterBegin = currCPlates.begin();
+					continue;
+				}
+				else
+				{
+					iterBegin = currCPlates.erase(iterBegin);
+					continue;
+				}
+				
 			}
 			if (k2 > -1 && k2 < 1) {
-				failure = failure & 0x02;
-				break;
+				//failure = failure & 0x01;
+				if (iterBegin == currCPlates.begin()) {
+					iterBegin = currCPlates.erase(iterBegin);
+					iterBegin = currCPlates.begin();
+					continue;
+				}
+				else
+				{
+
+					iterBegin = currCPlates.erase(iterBegin);
+					continue;
+				}
 			}
 
 			#ifdef DEBUG
@@ -1119,170 +883,44 @@ uchar PlateLocate::findDdgeDeskew() {
 			cv::Mat transformMat = cv::getAffineTransform(srcPoints, dstPoints);
 
 			cv::warpAffine(tempImg, affinedImg, transformMat, cv::Size(136, 36),CV_INTER_CUBIC);
+			cPlate->plateImg = affinedImg;
 			cv::imshow("warpAffine", affinedImg);
+			iterBegin++;
 		}
 		else
 		{
-			return failure;
-		}
-		cv::Mat affinedThresh = cv::Mat::zeros(affinedImg.size(), CV_8UC1);
-		cv::Mat affinedThresh1;
-		cv::cvtColor(affinedImg, affinedThresh, CV_BGR2GRAY);
-		//cv::Mat adatativetempImg = affinedThresh.clone();
-   		spatialOstu1(affinedThresh, 0,8, 1);
-		//util::Wallner(affinedThresh1, affinedThresh);//基于积分图的快速局部平均阈值算法，S取一定值，边缘较细，效果比局部ostu好，采用
-		//cv::adaptiveThreshold(adatativetempImg, adatativetempImg, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 11, -5);//常数C难以适应全部，淘汰
-		//cv::threshold(affinedGray, affinedGray, 0, 255, CV_THRESH_BINARY + CV_THRESH_OTSU);//对光照不均不友好，淘汰
-		cv::imshow("spatialOSTU", affinedThresh);
-	//clear edge
-		//判断是否黄车牌，翻转灰度
-		cv::Mat rectImg = cv::Mat(affinedThresh, cv::Rect(24,0,88 ,36));
-		if (cv::countNonZero(rectImg) > 1500) {//认为是黄车牌，二值化后字符为黑色
-			
-			cv::threshold(affinedThresh, affinedThresh, 128, 255, CV_THRESH_BINARY_INV);
-		}
-
-		
-		
-		std::string tempPath1 = "D:/VS/CPR/recoPlate1/";//识别车牌的保持路径
-		cv::imwrite(tempPath1 + std::to_string(Controler::getControler()->getCurrImgCount()) + "-0"  + ".jpg", affinedImg);
-		cv::imwrite(tempPath1 + std::to_string(Controler::getControler()->getCurrImgCount()) + "-3" + ".jpg", affinedThresh);
-		//cv::imwrite(tempPath1 + std::to_string(Controler::getControler()->getCurrImgCount()) + "----0" + std::to_string(std::rand() % 7) + ".jpg", adatativetempImg);
-		
-		
-		//去除上下边缘的白点
-		int rowCount=0;//满足跳变数的行数
-		for (int i = 0; i < affinedThresh.rows; i++) {
-			uchar *rowData = affinedThresh.ptr<uchar>(i);
-			int whiteCount=0;//行白点数
-			int jumpCount=0;//行跳变数
-			
-			for (int j = 1; j < affinedThresh.cols; j++) {
-				if (rowData[j] > 128) {
-					whiteCount++;
-				}
-				if (rowData[j - 1] != rowData[j]) {
-					jumpCount++;
-				}
-			}
-			if (whiteCount > DEAFAULT_PLATE_WIDTH*0.7) {
-				for (int j = 1; j < affinedThresh.cols; j++) {
-					rowData[j] = 0;
-				}
-			}
-
-			if (jumpCount < 12) {
-				for (int j = 1; j < affinedThresh.cols; j++) {
-					rowData[j] = 0;
-				}
+			if (iterBegin == currCPlates.begin()) {
+				iterBegin = currCPlates.erase(iterBegin);
+				iterBegin = currCPlates.begin();
+				continue;
 			}
 			else
 			{
-				rowCount++;
+				iterBegin = currCPlates.erase(iterBegin);
 			}
-
 		}
-		if (rowCount < 10) return failure=failure|0x04;
-
-		//去除左右边框并提取字符
-		std::vector<cv::Mat> charaterMat;
-
-		bool firstCol = 0; 
-		int colCount[136];
-		std::memset(colCount, 0, sizeof(colCount[0]) * 136);
-		for (int i = 0; i < affinedThresh.cols; i++) {
-			for (int j = 0; j < affinedThresh.rows; j++) {
-				if (affinedThresh.at<uchar>(j, i) > 128) {
-					colCount[i]++;
-				}
-			 }
-		}
-		(*cPlate).plateBinaryImg = affinedThresh.clone();
-		int average = 0;
-		for (int i = 0; i < 136; i++)if (colCount[i] >3)average++;
-		average = average / 7;//字符平均宽度
-
-		uchar startCol = 0;
-		uchar endCol = startCol;
-		std::vector < std::pair<uchar,uchar>> segmentPos;
-		std::pair<uchar, uchar> tempSegm;
-		bool inblock=false;
-		
-			for (int i = 0; i < 136; i++) {
-				if (inblock&&colCount[i] >3 ) { //字符块继续遍历
-					inblock=true;
-					endCol++;
-				}
-				if (!inblock&&colCount[i] >3) {//新的字符块开始遍历
-					endCol = startCol = i;
-					inblock = true;
-				}
-				if (inblock&&colCount[i] <3) {//字符块结束遍历
-					endCol =i;
-					inblock = false;
-					//判断字符块是否合格，有以下情况：粘连，不连接的字符，边框，根据是否第一个字符或最后一个字符判断
-					if (segmentPos.size() == 0) {//第一个字符
-						if ((endCol - startCol) > (average + 4)) { 
-							startCol +=4;
-							endCol += 2;
-						}
-						if ((endCol - startCol) < (average - 6)) {
-							inblock = true; 
-							continue;
-						}
-						if ((endCol - startCol) < (average - 4)) {
-							endCol += 4;
-						}
-					}else if (segmentPos.size() == 6) {//最后一个字符
-
-					}else if (segmentPos.size() >= 7) {//多余的字符
-						if ((endCol - startCol) < average);
-					}
-					else
-					{
-						if ((endCol - startCol) < (average - 7)) {
-							inblock = true;
-							continue;
-						}
-						if ((endCol - startCol) < (average - 6)) {
-							startCol -= 3;
-							endCol += 3;
-							
-						}
-					}
-
-					tempSegm=std::make_pair(startCol, endCol);
-					segmentPos.push_back(tempSegm);
-					cv::Mat charImg = cv::Mat(affinedThresh, cv::Rect(cv::Point(startCol, 0), cv::Point(endCol, 36)));
-					startCol = i;
-					cv::imshow("charImg", charImg);
-					//cv::waitKey(0);
-				}
-				if (!inblock&&colCount[i] < 6) {//空白区域，不做处理
-
-					//inblock = false;
-				}							
-			}
-			std::pair<uchar, uchar> tempPos;
-			cv::Rect charTempRect;
-			for (int i = 0; i < segmentPos.size(); i++) {
-				tempPos = segmentPos[i];
-				charTempRect = cv::Rect(cv::Point(tempPos.first, 0), cv::Point(tempPos.second, 36));
-				(*cPlate).characterRects.push_back(charTempRect);
-			}
-
+		/*
+		CharsSegment charsSegent;
+		cv::Mat plateThresImg;
+		std::vector<cv::RotatedRect>rr;
+		charsSegent.segmentUsingProjection(affinedImg, plateThresImg, rr);
+		cPlate->plateBinaryImg = plateThresImg;
+		cPlate->characterRects = rr;
 
 			std::string caffeModel = "D:/VS/CPR/model/CharacterRecognization.caffemodel";
 			std::string prototext = "D:/VS/CPR/model/CharacterRecognization.prototxt";
 			CNNRecognizer *cnnRecognizer = new CNNRecognizer(prototext, caffeModel);
-			cnnRecognizer->SegmentBasedSequenceRecognition(*cPlate);
+			std::vector<CPlate> tempVec;
+			tempVec.push_back(*cPlate);
+			cnnRecognizer->SegmentBasedSequenceRecognition(tempVec);
 
-		
-		cv::imwrite(tempPath1 + std::to_string(Controler::getControler()->getCurrImgCount()) + "-2" + ".jpg", affinedThresh);
+			std::string tempPath1 = "D:/VS/CPR/recoPlate1/";
+		cv::imwrite(tempPath1 + std::to_string(Controler::getControler()->getCurrImgCount()) + "-2" + ".jpg", plateThresImg);
 		cv::imshow("houghline", tempImg);
 		//cv::waitKey(0);
-
+		*/
 	}
+	return 0;
 }
 
 void PlateLocate::sobelRefineResearch(const cv::Mat &inputImg, std::vector<cv::RotatedRect>&sobelSecRects) {
@@ -1292,8 +930,8 @@ void PlateLocate::sobelRefineResearch(const cv::Mat &inputImg, std::vector<cv::R
 
 
 
-	void PlateLocate::sobelSecResearch(const cv::Mat &srcImg, const cv::Mat &inputImg, std::vector<cv::RotatedRect>&sobelSecRects, bool *hitArea) {
-		SVMJudge svm;
+	void PlateLocate::sobelSecResearch(const cv::Mat &srcImg, const cv::Mat &inputImg, std::vector<cv::RotatedRect>&sobelSecRects, std::vector<CPlate>&currCPlates, bool *hitArea) {
+//		SVMJudge svm;
 		int gridWidth = inputImg.size().width / DEAFAULT_GRID_X;
 		int gridx = DEAFAULT_GRID_X;
 		int gridy = DEAFAULT_GRID_Y;
@@ -1358,10 +996,10 @@ void PlateLocate::sobelRefineResearch(const cv::Mat &inputImg, std::vector<cv::R
 							CPlate tempPlate;
 							//绘制判断为车牌的矩形
 							cv::drawContours(resultImg, rectcontous, 0, cv::Scalar(0, 255, 0), 1);//改动
-							tempPlate.srcImg = currSize;
-							tempPlate.plateImg.push_back(rRectArea);//考虑第三次搜索完毕再存储
+							tempPlate.srcSize = currSize;
+							tempPlate.plateImg=rRectArea;//考虑第三次搜索完毕再存储
 							tempPlate.setPlateRotaRect(rotatedRect);
-							currPlates.push_back(tempPlate);
+							currCPlates.push_back(tempPlate);
 							platecout++;
 							util::getRotatedRectArea(srcImg, rotatedRect, rRectArea, true);
 							cv::imwrite(tempPath + std::to_string(Controler::getControler()->getCurrImgCount()) + "_"+std::to_string(i) + ".jpg", rRectArea);
@@ -1408,10 +1046,10 @@ void PlateLocate::sobelRefineResearch(const cv::Mat &inputImg, std::vector<cv::R
 							CPlate tempPlate;
 							//绘制判断为车牌的矩形
 							cv::drawContours(resultImg, rectcontous, 0, cv::Scalar(255, 255, 255), 1);//改动
-							tempPlate.srcImg = currSize;
-							tempPlate.plateImg.push_back(rRectArea);//考虑第三次搜索完毕再存储
-							//currPlates.plateImgs[0] = plateImg.clone();
+							tempPlate.srcSize = currSize;
+							tempPlate.plateImg=rRectArea;//考虑第三次搜索完毕再存储
 							tempPlate.setPlateRotaRect(rotatedRect);
+							currCPlates.push_back(tempPlate);
 							platecout++;
 							util::getRotatedRectArea(srcImg, rotatedRect, rRectArea, true);
 							cv::imwrite(tempPath + std::to_string(Controler::getControler()->getCurrImgCount()) + "___" + std::to_string(i) + ".jpg", rRectArea);
@@ -1424,18 +1062,15 @@ void PlateLocate::sobelRefineResearch(const cv::Mat &inputImg, std::vector<cv::R
 				}
 
 
-
-
-
 				startGridX = i + 1;
 
 			}
 			else if (hitArea[i] == true && startGridX == i) {
 				startGridX += 1;
-
+				qDebug() << "startGridX++";
 			}
 			else if (hitArea[i] != true && startGridX == i) {
-				qDebug() << "how";
+				qDebug() << "how";//第i块未被击中，且开始点==i，什么都不用做
 			}
 
 
@@ -1451,8 +1086,8 @@ void PlateLocate::sobelRefineResearch(const cv::Mat &inputImg, std::vector<cv::R
  * @param sobelFrtRects    储存判定为车牌区域的旋转矩形
  * @param hitArea    储存含有车牌的栅格信息 
  */
-void PlateLocate::sobelFrtResearch(const cv::Mat &srcImg, const cv::Mat &inputImg, std::vector<cv::RotatedRect>&sobelFrtRects, bool *hitArea) {
-	SVMJudge svm;
+void PlateLocate::sobelFrtResearch(const cv::Mat &srcImg, const cv::Mat &inputImg, std::vector<cv::RotatedRect>&sobelFrtRects, std::vector<CPlate>&currCPlates, bool *hitArea) {
+//	SVMJudge svm;
 	
 	int gridx = DEAFAULT_GRID_X, gridy = DEAFAULT_GRID_Y;
 	int gridXWidth= inputImg.size().width/gridx;
@@ -1509,14 +1144,14 @@ void PlateLocate::sobelFrtResearch(const cv::Mat &srcImg, const cv::Mat &inputIm
 			
 			
 			CPlate tempPlate;
-			tempPlate.srcImg = currSize;
+			tempPlate.srcSize = currSize;
 			tempPlate.setPlateRotaRect(rotatedRect);
 			platecout++;
 			util::getRotatedRectArea(srcImg, rotatedRect, rRectArea, true);
 			cv::imwrite(tempPath + std::to_string(Controler::getControler()->getCurrImgCount()) +"-"+ std::to_string(i) + ".jpg", rRectArea);
 			//Controler::getControler()->showImg(plateImg);
 			tempPlate.plateImg=rRectArea;//存储扩大后的矩形区域
-			currPlates.push_back(tempPlate);
+			currCPlates.push_back(tempPlate);
 			//判断车牌所在栅格区域			
 			rotatedRect.points(rectPoints);
 			int leftX= static_cast<int>(rectPoints[0].x < rectPoints[1].x ? rectPoints[0].x : rectPoints[1].x);

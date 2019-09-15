@@ -17,6 +17,7 @@
 #include<sstream>
 #include<windows.h>
 #include<corecrt_wstring.h>
+#include <math.h>
 
 #include<opencv.hpp>
 

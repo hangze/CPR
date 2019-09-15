@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "CNNRecognizer.h"
 #include "PlateLocate.h"
-
+#include "CPlate.h"
 CNNRecognizer::CNNRecognizer(std::string &prototxt,std::string &caffemodel)
 {
-	net = cv::dnn::readNetFromCaffe(prototxt, caffemodel);
+	net = cv::dnn::readNetFromCaffe(prototxt, caffemodel);//构造函数中读取模型
 }
 
 

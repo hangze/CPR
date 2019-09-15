@@ -1,7 +1,7 @@
 #pragma once
 #include <QObject>
-#include"PlateLocate.h"
-
+#include<PR_Flow.h>
+//extern class PR_Flow;
 class Controler : public QObject
 {
 	Q_OBJECT
@@ -34,13 +34,14 @@ public:
 	static CGarbo Garbo;
 	void showImg(const cv::Mat &img);
 	QImage plateImg;
-	PlateLocate *PR;
+	PR_Flow PRFlow;
 
 
 	inline bool setCurrImgCount(int Count) { currImgCount = Count;  emit signalShowCurrCount(currImgCount); return true; }
 	inline int getCurrImgCount(){return currImgCount; }
 	inline bool setImgTotalCount(int totalCount) { imgTotalCount = totalCount; emit signalShowTotalCount(imgTotalCount); return true; }
 	inline int getImgTotalCount() { return imgTotalCount; }
+	inline void setPlateImg(const cv::Mat &img);
 	//inline QString getimgDirectory() { return imgDirectory; }
 	inline void ShowMessage(const std::string &message, const std::string &title = "") { 
 		     emit signalShowMessage(QString::fromStdString(message), QString::fromStdString(title)); };

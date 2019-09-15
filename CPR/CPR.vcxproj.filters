@@ -28,6 +28,9 @@
       <Extensions>moc;h;cpp</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="thirdParty">
+      <UniqueIdentifier>{42d236ef-7a75-4539-bb48-32e95b34bc56}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -48,17 +51,32 @@
     <ClCompile Include="SVMJudge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LBP.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CNNRecognizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GenernalRecognizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="thirdparty\xmlParser\xmlParser.cpp">
+    <ClCompile Include="PR_Flow.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Score.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CharsSegment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LBP.cpp">
+      <Filter>thirdParty</Filter>
+    </ClCompile>
+    <ClCompile Include="thirdparty\xmlParser\xmlParser.cpp">
+      <Filter>thirdParty</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -92,13 +110,7 @@
     <ClInclude Include="SVMJudge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LBP.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CNNRecognizer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="accuracy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="backupSource.h">
@@ -106,6 +118,24 @@
     </ClInclude>
     <ClInclude Include="GenernalRecognizer.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PR_Flow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Score.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CharsSegment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LBP.h">
+      <Filter>thirdParty</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\xmlParser\xmlParser.h">
+      <Filter>thirdParty</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
