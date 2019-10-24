@@ -2,7 +2,6 @@
 #pragma once
 #include "Controler.h"
 #include"PlateLocate.h"
-#include<qtextcodec.h>
 #include"SVMJudge.h"
 
 #define DEBUG
@@ -144,8 +143,8 @@ void Controler::slotModelTest(const QString &testSamplePath) {
 	SVMJudge *svm = new SVMJudge();
 	for(int i=0;i<posImgNameList.size();i++){
 	cv::Mat srcImg = cv::imread(testSamplePath.toStdString()+"/"+posImgNameList[i].toStdString());
-	
-	if (svm->startJudge(srcImg)) { 
+	float score;
+	if (svm->startJudge(srcImg,score)) { 
 		plates++;
 	}
 	else {

@@ -121,7 +121,9 @@
     </QtRcc>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CharsSegment.cpp" />
+    <ClCompile Include="CharsSegment.cpp">
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
     <ClCompile Include="CNNRecognizer.cpp" />
     <ClCompile Include="Controler.cpp" />
     <ClCompile Include="CPlate.cpp" />

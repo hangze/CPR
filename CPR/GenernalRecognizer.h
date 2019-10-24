@@ -9,7 +9,7 @@ public:
 	GenernalRecognizer();
 	~GenernalRecognizer();
 
-	virtual std::string recognizeCharacter(cv::Mat &characterImg, CharType characterType) = 0;
+	virtual std::string recognizeCharacter(cv::Mat &characterImg, CharType characterType, double &totalconfidence) = 0;
 	void SegmentBasedSequenceRecognition(std::vector<CPlate> &plate);
 	
 };

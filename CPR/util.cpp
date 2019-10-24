@@ -4,6 +4,522 @@
 
 
 namespace util {
+	
+	void stretchImage(cv::Mat &img, double s = 0.005,int  bins = 2000) {
+	//	cv::HistogramCostExtractor
+		//	cv::km
+	}
+
+
+	
+	int GetHuangFuzzyThreshold(cv::Mat &img)
+	{	
+
+		int histGram[256] = { 0 };
+		if (img.channels() == 3) {
+			cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+		}
+		int nc = img.cols;
+		int nr = img.rows;
+		if (img.isContinuous()) {
+
+			nc *= nr;
+			nr = 1;
+		}
+
+		for (int i = 0; i < nr; i++) {
+			uchar *indata = img.ptr<uchar>(i);
+			for (int j = 0; j < nc; j++) {
+				histGram[indata[j]]++;
+			}
+		}
+
+
+		int X, Y;
+		int First, Last;
+		int Threshold = -1;
+		double BestEntropy = static_cast<double>(65536), Entropy;
+		//   找到第一个和最后一个非0的色阶值
+		for (First = 0; First < 256 && histGram[First] == 0; First++);
+		for (Last = 256 - 1; Last > First && histGram[Last] == 0; Last--);
+		if (First == Last) return First;                // 图像中只有一个颜色
+		if (First + 1 == Last) return First;            // 图像中只有二个颜色
+
+		// 计算累计直方图以及对应的带权重的累计直方图
+		std::vector<int> S;
+		S.resize(Last + 1,0);
+		std::vector<int> W;
+		W.resize(Last + 1, 0);	          // 对于特大图，此数组的保存数据可能会超出int的表示范围，可以考虑用long类型来代替
+		S[0] = histGram[0];
+
+		for (Y = First > 1 ? First : 1; Y <= Last; Y++)
+		{
+			S[Y] = S[Y - 1] + histGram[Y];
+			W[Y] = W[Y - 1] + Y * histGram[Y];
+		}
+
+		// 建立公式（4）及（6）所用的查找表
+		std::vector<double>  Smu;
+		Smu.resize(Last + 1 - First,0);
+		for (Y = 1; Y < Smu.size(); Y++)
+		{
+			double mu = 1 / (1 + (double)Y / (Last - First));               // 公式（4）
+			Smu[Y] = -mu * std::log(mu) - (1 - mu) * std::log(1 - mu);      // 公式（6）
+		}
+
+		// 迭代计算最佳阈值
+		for (Y = First; Y <= Last; Y++)
+		{
+			Entropy = 0;
+			int mu = (int)std::round((double)W[Y] / S[Y]);             // 公式17
+			for (X = First; X <= Y; X++)
+				Entropy += Smu[std::abs(X - mu)] * histGram[X];
+			mu = (int)std::round((double)(W[Last] - W[Y]) / (S[Last] - S[Y]));  // 公式18
+			for (X = Y + 1; X <= Last; X++)
+				Entropy += Smu[std::abs(X - mu)] * histGram[X];       // 公式8
+			if (BestEntropy > Entropy)
+			{
+				BestEntropy = Entropy;      // 取最小熵处为最佳阈值
+				Threshold = Y;
+			}
+		}
+		return Threshold*1.05;
+	}
+
+
+	//判断是否为双峰
+	bool IsDimodal(double *HistGram)       // 检测直方图是否为双峰的
+	{
+		// 对直方图的峰进行计数，只有峰数位2才为双峰 
+		int Count = 0;
+		for (int Y = 1; Y < 255; Y++)
+		{
+			if (HistGram[Y - 1] < HistGram[Y] && HistGram[Y + 1] < HistGram[Y])
+			{
+				Count++;
+				if (Count > 2) return false;
+			}
+		}
+		if (Count == 2)
+			return true;
+		else
+			return false;
+	}
+
+
+
+	//基于双峰谷底最小值的阈值方法
+	int GetMinimumThreshold(cv::Mat &img)
+	{
+
+		int histGram[256] = {0};
+		if (img.channels() == 3) {
+			cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+		}
+		int nc = img.cols;
+		int nr = img.rows;
+		if (img.isContinuous()) { 
+			
+			nc *= nr;
+			nr = 1;
+		}
+		
+		for (int i = 0; i < nr; i++) {
+			uchar *indata = img.ptr<uchar>(i);
+			for (int j = 0; j < nc; j++) {
+				histGram[indata[j]]++;
+			}
+		}
+
+		int Y, Iter = 0;
+		double HistGramC[256];           // 基于精度问题，一定要用浮点数来处理，否则得不到正确的结果
+		double HistGramCC[256];          // 求均值的过程会破坏前面的数据，因此需要两份数据
+		for (Y = 0; Y < 256; Y++)
+		{
+			HistGramC[Y] = histGram[Y];
+			HistGramCC[Y] = histGram[Y];
+		}
+
+		// 通过三点求均值来平滑直方图
+		while (IsDimodal(HistGramCC) == false)                                        // 判断是否已经是双峰的图像了      
+		{
+			HistGramCC[0] = (HistGramC[0] + HistGramC[0] + HistGramC[1]) / 3;                 // 第一点
+			for (Y = 1; Y < 255; Y++)
+				HistGramCC[Y] = (HistGramC[Y - 1] + HistGramC[Y] + HistGramC[Y + 1]) / 3;     // 中间的点
+			HistGramCC[255] = (HistGramC[254] + HistGramC[255] + HistGramC[255]) / 3;         // 最后一点
+		//	System.Buffer.BlockCopy(HistGramCC, 0, HistGramC, 0, 256 * sizeof(double));
+			memcpy(HistGramC, HistGramCC, 256*sizeof(double));
+			Iter++;
+			if (Iter >= 1000) return -1;                                                   // 直方图无法平滑为双峰的，返回错误代码
+		}
+		
+		
+		/*
+		// 阈值极为两峰之间的最小值 
+		bool Peakfound = false;
+		for (Y = 1; Y < 255; Y++)
+		{
+			if (HistGramCC[Y - 1] < HistGramCC[Y] && HistGramCC[Y + 1] < HistGramCC[Y]) Peakfound = true;
+			if (Peakfound == true && HistGramCC[Y - 1] >= HistGramCC[Y] && HistGramCC[Y + 1] >= HistGramCC[Y])
+				return Y - 1;
+		}
+		return -1;
+		*/
+
+		
+		//阈值为两峰直接的中间值
+		int Index = 0;
+		int Peak[2] = { 0 };
+		for (Y = 1, Index = 0; Y < 255; Y++)
+			if (HistGramCC[Y - 1] < HistGramCC[Y] && HistGramCC[Y + 1] < HistGramCC[Y]) Peak[Index++] = Y - 1;
+		return ((Peak[0] + Peak[1]) / 2);
+
+	}
+	
+
+
+	void spatialOstu(cv::Mat &inputOutputImg, int grid_x, int grid_y) {
+		cv::Mat &src = inputOutputImg;
+		double globalSigma;
+		if (src.channels() == 3) {
+			cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+		}
+		double globalThreshVal = util::getThreshVal_Otsu_8u(src, globalSigma);
+		int width = src.cols / grid_x;
+		int height = src.rows / grid_y;
+		std::vector<double> local_globalSigma;
+
+		// iterate through grid
+
+		double sigma;
+		cv::Mat src_cellLine = cv::Mat(src, cv::Range(14, 24), cv::Range(10, 60));
+		double cellThreshVal = util::getThreshVal_Otsu_8u(src_cellLine, sigma);//ostu阈值法
+	//	double cellThreshVal = util::GetMinimumThreshold(src_cellLine);//基于双峰
+	//	double cellThreshVal = util::GetHuangFuzzyThreshold(src_cellLine);//基于模糊集
+
+		src_cellLine = cv::Mat(src, cv::Range(14, 24), cv::Range(60, 120));
+		double cellThreshVal2 = util::getThreshVal_Otsu_8u(src_cellLine, sigma);//ostu阈值法
+	//	double cellThreshVal2 = util::GetMinimumThreshold(src_cellLine);//基于双峰
+	//	double cellThreshVal2 = util::GetHuangFuzzyThreshold(src_cellLine);//基于模糊集
+
+		for (int j = 0; j < grid_y; j++) {
+
+			cv::Mat src_cellLine = cv::Mat(src, cv::Range(18, 20), cv::Range(30, 100));
+		//	double cellThreshVal = util::getThreshVal_Otsu_8u(src_cellLine, sigma);
+			for (int i = 0; i < grid_x; i++) {
+				
+				cv::Mat src_cell = cv::Mat(src, cv::Range(j * height, (j + 1) * height), cv::Range(i * width, (i + 1) * width));
+				
+				cv::imshow("src_cell", src_cell);
+				if (i >0 ) {
+					cv::threshold(src_cell, src_cell, cellThreshVal2, 255, CV_THRESH_BINARY);
+				}
+				else
+				{
+					cv::threshold(src_cell, src_cell, cellThreshVal, 255, CV_THRESH_BINARY);
+				}
+
+				
+
+				//cv::imshow("after src_cell", src_cell);
+				//cv::waitKey(0);
+			}
+		}
+	}
+
+
+
+	cv::Mat matrixWiseMulti(cv::Mat &m1, cv::Mat &m2) {
+
+		cv::Mat dst = m1.mul(m2);
+
+		return dst;
+
+	}
+
+
+
+
+
+	/**
+	 * @brief 概率阈值化
+	 * percent占比内的灰度值较小的置0，其他置255
+	 * @param inputGray    输入灰度图
+	 * @param outputGray    输出二值图
+	 * @param percent    百分比，该占比内的左边界灰度级全部置0，其他灰度级置255
+	 * @return parameter description
+	 *     -<em>false</em> fail
+	 *     -<em>true</em> succeed
+	 */
+	void probilityThreshold(cv::Mat &inputGray, cv::Mat &outputGray, int percent) {
+		if (inputGray.channels() == 3)cv::cvtColor(inputGray, inputGray, cv::COLOR_BGR2GRAY);
+		int nc = inputGray.cols;
+		int nr = inputGray.rows;
+		int hist[256] = { 0 };
+		if (inputGray.isContinuous()) {
+			nc = nc * nr;
+			nr = 1;
+		}
+		//计算直方图
+		for (int i = 0; i < nr; i++) {
+			uchar  *rowdata = inputGray.ptr<uchar>(i);
+			for (int j = 0; j < nc; j++) {
+				hist[rowdata[j]]++;
+			}
+		}
+		//计算概率直方图
+		int totalNum = nc;
+		float probability[256] = { 0 };
+		probability[0] = float(hist[0]) / nc;
+		for (int i = 1; i < 256; i++) {
+			probability[i] = probability[i - 1] + float(hist[i]) / nc;
+		}
+
+		
+		int minGray;
+		for (int i = 0; i < 256; i++) {
+			if (probability[i] > percent / 100.0) {
+				minGray = i;
+				break;
+			}
+		}
+
+		//修改图像灰度
+		outputGray = inputGray.clone();
+		for (int i = 0; i < nr; i++) {
+			uchar  *rowdata = outputGray.ptr<uchar>(i);
+			for (int j = 0; j < nc; j++) {
+				if (rowdata[j] <= minGray) {
+					rowdata[j] = 0;
+				}
+				else if (rowdata[j] >minGray)
+				{
+					rowdata[j] = 255;
+				}
+				
+			}
+		}
+	}
+
+
+
+
+
+
+
+	/**
+	 * @brief 对比度增强
+	 * percent占比内的左右边界灰度级，置为0或255,并拉伸
+	 * @param inputGray    输入灰度图
+	 * @param outputGray    输出灰度图
+	 * @param percent    百分比，该占比内的左右边界灰度级，置为0或255
+	 * @return parameter description
+	 *     -<em>false</em> fail
+	 *     -<em>true</em> succeed
+	 */
+	void contrastEnhance(cv::Mat &inputGray, cv::Mat &outputGray, int percent) {
+		if (inputGray.channels() == 3)cv::cvtColor(inputGray, inputGray, cv::COLOR_BGR2GRAY);
+		int nc = inputGray.cols;
+		int nr = inputGray.rows;
+		int hist[256] = { 0 };
+		if (inputGray.isContinuous()) {
+			nc = nc * nr;
+			nr = 1;			
+		}
+		//计算直方图
+		for (int i = 0; i < nr; i++) {
+			uchar  *rowdata = inputGray.ptr<uchar>(i);
+			for (int j = 0; j < nc; j++) {
+				hist[rowdata[j]]++;			
+			}
+		}
+		//计算概率直方图
+		int totalNum = nc;
+		float probability[256] = { 0 };
+		probability[0] = float(hist[0]) / nc;
+		for (int i =1; i < 256; i++) {
+			probability[i] = probability[i - 1] + float(hist[i]) / nc;
+		}
+
+		//计算百分比的灰度区间
+		int minGray;
+		int maxGray;
+		for (int i = 0;i<256 ; i++) {
+			if (probability[i] > percent / 100.0) {
+				minGray = i;
+				break;
+			}
+		}
+		for (int j = 255; j > 0; j--) {
+			if ((1-probability[j]) > percent / 100.0) {
+				maxGray = j;
+				break;
+			}
+		}
+
+		//修改图像灰度
+		outputGray = inputGray.clone();
+		int interval=maxGray-minGray;
+		for (int i = 0; i < nr; i++) {
+			uchar  *rowdata = outputGray.ptr<uchar>(i);
+			for (int j = 0; j < nc; j++) {
+				if (rowdata[j] <= minGray) {
+					rowdata[j] = 0;
+				}
+				else if(rowdata[j]>=maxGray)
+				{
+					rowdata[j] = 255;
+				}
+				else
+				{
+					rowdata[j] = static_cast<uchar>((rowdata[j] - minGray) / float(interval) * 255);
+				}
+			}
+		}
+	}
+
+
+	void  clearUpDownBorder(const cv::Mat &binaryPlateImg, cv::Mat &outputPlateImg, int threshold) {
+		outputPlateImg = binaryPlateImg.clone();
+		for (size_t i = 0; i < outputPlateImg.rows; i++) {
+			uchar* inData = outputPlateImg.ptr<uchar>(i);
+			int jumpCount = 0;
+			for (size_t j = 0; j < outputPlateImg.cols - 1; j++)
+			{
+				if (inData[j] != inData[j + 1])jumpCount++;
+			}
+			if (jumpCount < threshold)
+			{
+				for (size_t j = 0; j < outputPlateImg.cols; j++)inData[j] = 0;
+			}
+		}
+		cv::imshow("before clear", outputPlateImg);
+
+
+		uchar lastZeroCol = 0;
+  		for (size_t i = 0; i < outputPlateImg.cols; i++) {
+			uchar whitePointCount=0;
+		
+		//	uchar stdCharWidth = outputPlateImg.cols / 10;
+			for (size_t j = 0; j < outputPlateImg.rows; j++) {
+				if (outputPlateImg.at<uchar>(j, i) == 255)whitePointCount++;
+			}
+			
+			if (whitePointCount > 0 && whitePointCount < 4&&lastZeroCol>15) {
+
+				for (size_t j = 0; j < outputPlateImg.rows; j++) {
+					outputPlateImg.at<uchar>(j, i) =0;
+				}
+
+				lastZeroCol=0;
+			}
+			else if(whitePointCount==0)
+			{
+				lastZeroCol=0;
+			}
+			else
+			{
+				lastZeroCol++;
+			}
+			
+
+		}
+		cv::imshow("after clear", outputPlateImg);
+		cv::imshow("clear Border outputImg", outputPlateImg);
+	//	cv::waitKey();
+	}
+
+
+	//float MaxCG:对高频成分的最大增益值,int n：局部半径,int C:对高频的直接增益系数  
+
+	void ACE(cv::Mat &src, int C, int n , float MaxCG ) {
+
+		if (src.channels() == 3) {
+			cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+
+		}
+		int rows = src.rows;
+
+		int cols = src.cols;
+
+
+
+		cv::Mat meanLocal; //图像局部均值  
+
+		cv::Mat varLocal;  //图像局部方差  
+
+		cv::Mat meanGlobal;//全局均值
+
+		cv::Mat varGlobal; //全局标准差  
+		
+
+
+		cv::blur(src.clone(), meanLocal, cv::Size(n, n));
+
+		imshow("低通滤波", meanLocal);
+
+		cv::Mat highFreq = src - meanLocal;//高频成分 
+
+		cv::imshow("高频成分", highFreq);
+
+
+
+		varLocal = matrixWiseMulti(highFreq, highFreq);
+
+		cv::blur(varLocal, varLocal, cv::Size(n, n));
+
+		//换算成局部标准差  
+
+		varLocal.convertTo(varLocal, CV_32F);
+
+		for (int i = 0; i < rows; i++) {
+
+			for (int j = 0; j < cols; j++) {
+
+				varLocal.at<float>(i, j) = (float)sqrt(varLocal.at<float>(i, j));
+
+			}
+
+		}
+
+		cv::meanStdDev(src, meanGlobal, varGlobal);
+
+		cv::Mat gainArr = 0.5 * meanGlobal / varLocal;//增益系数矩阵  
+
+
+
+		//对增益矩阵进行截止  
+
+		for (int i = 0; i < rows; i++) {
+
+			for (int j = 0; j < cols; j++) {
+
+				if (gainArr.at<float>(i, j) > MaxCG) {
+
+					gainArr.at<float>(i, j) = MaxCG;
+
+				}
+
+			}
+
+		}
+
+		gainArr.convertTo(gainArr, CV_8U);
+
+		gainArr = matrixWiseMulti(gainArr, highFreq);
+
+		cv::Mat dst1 = meanLocal + gainArr;
+
+		cv::imshow("变增益方法", dst1);
+		
+		cv::Mat dst2 = meanLocal + C * highFreq;
+
+		cv::imshow("恒增益方法", dst2);
+		src = dst1;
+	//	cv::waitKey(0);
+
+	}
+
 
 	std::string getTimeString() {
 		time_t t = time(NULL);
@@ -127,7 +643,7 @@ GBK 转 UTF-8
 
 		int t = -5;
 
-		int s = src.cols >> 2;
+		int s = src.cols >> 4;
 
 		const int S = 9;
 
@@ -253,14 +769,15 @@ GBK 转 UTF-8
 
 	void AdaptiveThereshold(cv::Mat src, cv::Mat &dst, char percent)
 	{
-		if (src.type() == CV_8UC3) {
-			cvtColor(src, dst, CV_BGR2GRAY);
+		dst = src.clone();
+		if (dst.type() == CV_8UC3) {
+			cvtColor(dst, dst, CV_BGR2GRAY);
 		}
 
 		int x1, y1, x2, y2;
 		int count = 0;
 		long long sum = 0;
-		int S = 13;  //划分区域的大小S*S,S越大，边缘越粗
+		int S = 9;  //划分区域的大小S*S,S越大，边缘越粗
 		//int T = 2;        //现用percent代替
 		/*百分比，用来最后与阈值的比较。原文：If the value of the current pixel is t percent less than this average
 							then it is set to black, otherwise it is set to white.*/
@@ -368,34 +885,38 @@ GBK 转 UTF-8
 	 * @param outImg    输出图像，大小与选项矩形同， 已正置
 	 * @param extend	true则截取旋转矩形扩大后的图像
 	 */
-	void getRotatedRectArea(const cv::Mat &srcImg, const cv::RotatedRect &rRect, cv::Mat &outImg, bool extend) {
+	void getRotatedRectArea(const cv::Mat &srcImg, cv::RotatedRect &rRect, cv::Mat &outImg,cv::Mat &transMat, bool extend) {
 
 		float widthExtend = 1;
 		float hightExtend = 1;
-		cv::RotatedRect rRectCopy = rRect;
+		cv::RotatedRect &rRectCopy = rRect;
 		float ratio = float(rRectCopy.size.width) / rRectCopy.size.height;
 		if (extend) {
 			widthExtend = 1.6;
 			hightExtend = 1.2;
 			//根据旋转矩形的长宽比进行扩大		
 			if (ratio < 1) {
-				ratio = 1 / ratio;
-				if (ratio < 3.7)rRectCopy.size.height = rRectCopy.size.height *(8.2 / ratio - 1);//原为7.8
+ 				ratio = 1 / ratio;
+			//	if (ratio < 3.4)rRectCopy.size.height = rRectCopy.size.height *(8.4 / ratio - 1);//原为7.8
+				rRectCopy.size.height = rRectCopy.size.height *1.1;
 				if (rRectCopy.angle < -10 || rRectCopy.angle>-80) {
-					rRectCopy.size.width += 16;
+					rRectCopy.size.width += 4;
 				}
 				else
 				{
-					rRectCopy.size.width += 5;
+					rRectCopy.size.width += 2;
 				}
 			}
 			else
 			{
-				if (ratio < 3.7)rRectCopy.size.width = rRectCopy.size.width *(8.2 / ratio - 1);
-				if (rRectCopy.angle<-10 || rRectCopy.angle>-80) { rRectCopy.size.height += 16; }
+			//	if (ratio < 3.4)rRectCopy.size.width = rRectCopy.size.width *(8.4 / ratio - 1);
+				rRectCopy.size.width = rRectCopy.size.width *1.1;
+				if (rRectCopy.angle<-10 || rRectCopy.angle>-80) {
+					 rRectCopy.size.height += 4;
+				}
 				else
 				{
-					rRectCopy.size.height += 5;
+					rRectCopy.size.height += 2;
 				}
 			}
 		}
@@ -403,23 +924,22 @@ GBK 转 UTF-8
 		rRectCopy.points(vertices);
 		if (rRectCopy.size.width < rRectCopy.size.height) {
 			std::swap(rRectCopy.size.width, rRectCopy.size.height);
+			rRectCopy.angle = rRectCopy.angle + 90;
 			std::swap(vertices[0], vertices[3]);
 			std::swap(vertices[0], vertices[2]);
 			std::swap(vertices[0], vertices[1]);
 		}
-		//将矩形点转换到传入原图大小的矩形点
-		for (int i = 0; i < 4; i++) {
-			vertices[i].x = vertices[i].x*srcImg.cols / IDEA_WIDTH;
-			vertices[i].y = vertices[i].y*srcImg.cols / IDEA_WIDTH;
-		}
-		cv::Point2f dstPoint[3];
-		dstPoint[0] = cv::Point2f(0, rRectCopy.size.height*srcImg.cols / IDEA_WIDTH);
-		dstPoint[1] = cv::Point2f(0, 0);
-		dstPoint[2] = cv::Point2f(rRectCopy.size.width*srcImg.cols / IDEA_WIDTH, 0);
-		cv::Mat transMat = cv::getAffineTransform(vertices, dstPoint);
-		//cv::GaussianBlur(src)//此处可考虑使用高斯模糊
-		cv::warpAffine(srcImg, outImg, transMat, cv::Size(rRectCopy.size.width*srcImg.cols / IDEA_WIDTH, rRectCopy.size.height*srcImg.cols / IDEA_WIDTH));
 
+		cv::Point2f dstPoint[3];
+	//	dstPoint[0] = cv::Point2f(0, rRectCopy.size.height);
+		dstPoint[0] = cv::Point2f(0,36);
+		dstPoint[1] = cv::Point2f(0, 0);
+	//	dstPoint[2] = cv::Point2f(rRectCopy.size.width, 0);
+		dstPoint[2] = cv::Point2f(136, 0);
+		transMat = cv::getAffineTransform(vertices, dstPoint);
+		//cv::GaussianBlur(src)//此处可考虑使用高斯模糊
+	//	cv::warpAffine(srcImg, outImg, transMat, cv::Size(rRectCopy.size.width, rRectCopy.size.height));
+		cv::warpAffine(srcImg, outImg, transMat, cv::Size(136,36));
 	}
 
 	//画栅格线
@@ -427,10 +947,10 @@ GBK 转 UTF-8
 
 		outputImg = srcImg.clone();
 		for (int i = 1; i < gridy; i++) {
-			cv::line(outputImg, cv::Point(0, outputImg.size().height*i / gridy), cv::Point(800, outputImg.size().height*i / gridy), cv::Scalar(255, 255, 255), 3);
+			cv::line(outputImg, cv::Point(0, outputImg.size().height*i / gridy), cv::Point(IDEA_WIDTH, outputImg.size().height*i / gridy), cv::Scalar(255, 255, 255), 3);
 		}
 		for (int i = 1; i < gridx; i++) {
-			cv::line(outputImg, cv::Point(800 * i / gridx, 0), cv::Point(800 * i / gridx, outputImg.size().height), cv::Scalar(255, 255, 255), 3);
+			cv::line(outputImg, cv::Point(IDEA_WIDTH * i / gridx, 0), cv::Point(IDEA_WIDTH * i / gridx, outputImg.size().height), cv::Scalar(255, 255, 255), 3);
 		}
 		//Controler::getControler()->showImg(outputImg);
 	}
@@ -470,7 +990,7 @@ GBK 转 UTF-8
 
 		double mu = 0, scale = 1. / (size.width*size.height);
 		for (i = 0; i < N; i++)
-			mu += i * (double)h[i];
+			mu += i * (double)h[i];//
 
 		mu *= scale;
 		double mu1 = 0, q1 = 0;

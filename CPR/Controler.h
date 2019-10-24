@@ -37,7 +37,7 @@ public:
 	PR_Flow PRFlow;
 
 
-	inline bool setCurrImgCount(int Count) { currImgCount = Count;  emit signalShowCurrCount(currImgCount); return true; }
+	inline bool setCurrImgCount(int Count) { currImgCount = Count;  emit signalShowCurrCount(currImgCount+1); return true; }
 	inline int getCurrImgCount(){return currImgCount; }
 	inline bool setImgTotalCount(int totalCount) { imgTotalCount = totalCount; emit signalShowTotalCount(imgTotalCount); return true; }
 	inline int getImgTotalCount() { return imgTotalCount; }

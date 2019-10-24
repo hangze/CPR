@@ -170,6 +170,7 @@ int Score::calcuAccuracy(std::string imgPath,int allTime) {
 					int diff = util::levenshtein_distance(gtImgName, recoImgName);
 					if (diff == 0) {
 						zeroErrorRecoPlateCount++;
+						oneErrorRecoPlateCount++;
 						//recoPlateCount++;
 					}
 					else if (diff == 1)

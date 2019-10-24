@@ -35,6 +35,17 @@
 
 namespace util{
 
+
+
+	
+
+	void probilityThreshold(cv::Mat &inputGray, cv::Mat &outputGray, int percent);
+	void contrastEnhance(cv::Mat &inputGray, cv::Mat &outputGray, int percent);
+	void  clearUpDownBorder(const cv::Mat &binaryPlateImg, cv::Mat &outputPlateImg, int threshold);
+
+	void ACE(cv::Mat &src, int C = 3, int n = 3, float MaxCG = 7.5);
+	cv::Mat matrixWiseMulti(cv::Mat &m1, cv::Mat &m2);
+	
 	std::string getTimeString();
 	//计算旋转矩形的安全正置矩形
 	bool calcSafeRect(const cv::RotatedRect &roi_rect, const cv::Size &src,
@@ -42,7 +53,7 @@ namespace util{
 
 	std::string UtfToGbk(const char* utf8);
 	
-
+	void contrastEnhance(cv::Mat &inputGray,cv::Mat &outputGray,int percent);
 
 	//utf转gbk
 
@@ -111,12 +122,18 @@ void on_mouse(int EVENT, int x, int y, int flags, void* userdata);
  * @param outImg    输出图像，大小与选项矩形同， 已正置
  * @param extend	true则截取旋转矩形扩大后的图像
  */
-void getRotatedRectArea(const cv::Mat &srcImg, const cv::RotatedRect &rRect, cv::Mat &outImg, bool extend = false);
+void getRotatedRectArea(const cv::Mat &srcImg, cv::RotatedRect &rRect, cv::Mat &outImg, cv::Mat &transMat, bool extend = false);
 
 //画栅格线
 void drawGrid(const cv::Mat &srcImg, cv::Mat &outputImg, int gridx, int gridy);
 double getThreshVal_Otsu_8u(const cv::Mat & _src, double &pSigma);
+void Wallner(cv::Mat &src, cv::Mat &dst);
 
+
+
+void spatialOstu(cv::Mat &inputOutputImg, int grid_x, int grid_y);
+int GetHuangFuzzyThreshold(cv::Mat &img);//基于模糊集的阈值方法
+int GetMinimumThreshold(cv::Mat &img); //基于双峰的阈值方法
 }//namespace util
 
 

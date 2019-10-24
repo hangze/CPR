@@ -1,5 +1,5 @@
 #pragma once
-
+#include"util.h"
 enum CharType { CHINESE, LETTER, LETTER_NUM };
 
 /**
@@ -17,6 +17,8 @@ public:
 	inline cv::Mat & getPlateImg() { return plateImg; };
 	inline void setPlateChars(std::string plateString) { plateChars = plateString; };
 	inline std::string getPlateChars() { return plateChars; };
+	inline float getScore() { return score; };
+	inline void setScore(float scoreValue) {score= scoreValue; };
 	 cv::RotatedRect getRotatedRect();
 	 void setPlateRotaRect(cv::RotatedRect rr);
 
@@ -30,6 +32,9 @@ public:
 	std::vector<cv::Mat> characterCodeing;//字符识别结果（非字符串，而是编码），未用到
 	cv::RotatedRect plateRotaRect;//车牌矩形
 	std::string plateChars;//字符识别结果
+	cv::Mat transformMat;
+	cv::Mat chineseImg;
+	double confidence=0;
 private:
-
+	float score;
 };

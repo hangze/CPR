@@ -61,7 +61,7 @@ void SVMJudge::startTrain(std::string &positivePath, std::string &negativePath,s
 	
 	for (int i = 0; i < negImgNameList.size(); i++) {
 		srcImg = cv::imread(negativePath +"/" + negImgNameList[i].toStdString());
-		cv::GaussianBlur(srcImg, srcImg, cv::Size(3, 3), 0);
+	//	cv::GaussianBlur(srcImg, srcImg, cv::Size(3, 3), 0);
 		cv::resize(srcImg, tempImg, cv::Size(136, 36));
 		cv::cvtColor(tempImg, tempImg, cv::COLOR_BGR2GRAY);
 		extractFeature(tempImg, cv::Size(34, 9), positiveFeature);
@@ -77,24 +77,33 @@ void SVMJudge::startTrain(std::string &positivePath, std::string &negativePath,s
 	SVMPtr->save(saveModelPath+"/svm.xml");
 	
 }
-bool SVMJudge::startJudge(const cv::Mat &srcImg) {
+bool SVMJudge::startJudge(const cv::Mat &srcImg,float &score) {
 	
 	qDebug() << SVMPtr->getVarCount();
 	cv::Mat Feature;
 
 	cv::Mat tempImg;
-	cv::GaussianBlur(srcImg, srcImg, cv::Size(3, 3), 0);
+	//cv::GaussianBlur(srcImg, srcImg, cv::Size(3, 3), 0);
 	cv::resize(srcImg, tempImg, cv::Size(136, 36));
-	cv::cvtColor(tempImg, tempImg, cv::COLOR_BGR2GRAY);
+	if (srcImg.channels() == 3) {
+		cv::cvtColor(tempImg, tempImg, cv::COLOR_BGR2GRAY);
+	}
+	
+	
+	clahe->apply(tempImg, tempImg);
+	//cv::imshow("prep", tempImg);
+	//cv::waitKey(0);
 	extractFeature(tempImg, cv::Size(34, 9), Feature);
 	Feature.convertTo(Feature, CV_32FC1);
-	if (SVMPtr->predict(Feature)==1) {
-		qDebug() << "plates";
+	score = SVMPtr->predict(Feature,cv::noArray(),cv::ml::StatModel::RAW_OUTPUT);
+	if (score <0.3) {//原为0.3
+		
+		qDebug() << "plates"<<score;
 		return true;
 	}
 	else
 	{
-		qDebug() << "no plates";
+		qDebug() << "no plates" << score;
 		return false;
 	}
 }
